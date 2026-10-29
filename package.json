@@ -1,0 +1,8 @@
+{
+  "name": "get-rid-of-the-ocean",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "start": "node server.mjs", "test": "node --test tests/*.test.mjs", "vendor": "node vendor.mjs", "benchmark": "node --expose-gc benchmark.mjs" },
+  "dependencies": { "three": "0.180.0" }
+}

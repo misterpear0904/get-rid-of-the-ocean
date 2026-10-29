@@ -1,0 +1,7 @@
+node_modules/
+*.tar.gz
+*.zip
+*.log
+qa/
+.openai/
+.tools/

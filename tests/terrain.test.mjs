@@ -1,0 +1,6 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {LAYOUT,basinHeight,walkableHeight} from '../dist/terrain.js';
+test('pool steps provide a continuous way down and back out once dry',()=>{const x=-LAYOUT[3].hx*.55;let y=0;for(let z=4.5;z>=-2;z-=.1){const next=walkableHeight(3,x,z,0,y);assert.notEqual(next,null,`step at ${z}`);y=next;}assert.equal(y,LAYOUT[3].floor);for(let z=-2;z<=4.5;z+=.1){const next=walkableHeight(3,x,z,0,y);assert.notEqual(next,null);y=next;}assert.equal(y,0);});
+test('water blocks submerged steps and cliffs cannot be walked off',()=>{const x=-LAYOUT[3].hx*.55;assert.equal(walkableHeight(3,x,0,1,-1),null);assert.equal(walkableHeight(3,0,3.5,0,0),null);const h=basinHeight(3,x,3);assert.notEqual(walkableHeight(3,x,3,.5,h),null);const deep=basinHeight(3,x,0);assert.equal(walkableHeight(3,x,0,.5,deep),null);});
+test('receding lake and ocean expose walkable shore while the wet bed stays blocked',()=>{for(const stage of [4,5]){const x=LAYOUT[stage].hx*.9,z=-4,h=basinHeight(stage,x,z);assert.ok(h<0);assert.equal(walkableHeight(stage,x,z,1,h),null);assert.equal(walkableHeight(stage,x,z,.1,h),h);assert.equal(walkableHeight(stage,0,-4,.5,LAYOUT[stage].floor),null);assert.equal(walkableHeight(stage,0,-4,0,LAYOUT[stage].floor),LAYOUT[stage].floor);}});
