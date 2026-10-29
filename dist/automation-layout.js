@@ -10,8 +10,7 @@ function validSite(stage,x,z,size){
  if(stage>=3){const a=accessLayout(stage);if(Math.abs(x-a.entryX)<1.25+size&&z+4>hz+a.deck-size&&z+4<hz+a.deck+a.rampLength+size)return false;}
  if(Math.abs(x)<hx+size+sourceGap&&Math.abs(z+4)<hz+size+sourceGap)return false;
  const shops=[[-hx-7.2,-5], [hx+7.2,-5],[-hx-7.2,5]];
- if(shops.some(([sx,sz])=>Math.abs(x-sx)<3.2+size&&Math.abs(z-sz)<2.5+size))return false;
- if(Math.abs(x-(hx+3))<1.4+size&&Math.abs(z-(-4+hz+1))<1.3+size)return false;
+ if(shops.some(([sx,sz])=>Math.abs(x-sx)<3.3+size&&Math.abs(z-sz)<3.3+size))return false;
  if(x>-8-size&&x<8+size&&z>-4+hz+6-size&&z<-4+hz+12+size)return false;
  return true;
 }

@@ -25,7 +25,7 @@ The first-person update adds cup/pot level windows, a fixed original-full line, 
 
 The scale update keeps heaters/intakes under the water and connects them to visible above-ground boilers, pumps, bucket crews, and solar rigs. The ocean adds offshore platforms and cooling towers. Animated exhaust, water discharge, conveyors of light through pipes, and moving bucket bots make production visible. Machine installation includes a one-time startup surge of up to 4% of the current container (eight seconds of that machine's output, credited as real removal).
 
-The pool is 24 world-metres wide, the lake 44, and the ocean 88, with fixed-size people, office doors, and railings as references. Pool steps and receding shores become walkable as they dry; the camera follows your ground height. Ruins and a larger shipwreck emerge. At stage completion choose EXPLORE THE DRY BED to stay; press your interact key near the basin to return to the completion panel when ready to continue. The trophy yard beyond the source displays your emptied cup, pot, and bathtub at their original sizes. The world dimensions and litre economy are intentionally stylized.
+The pool is 24 world-metres wide, the lake 44, and the ocean 88, with fixed-size people and railings as references. Pool steps and receding shores become walkable as they dry; the camera follows your ground height. Ruins and a larger shipwreck emerge. At stage completion choose EXPLORE THE DRY BED to stay; press your interact key near the basin to return to the completion panel when ready to continue. The trophy yard beyond the source displays your emptied cup, pot, and bathtub at their original sizes. The world dimensions and litre economy are intentionally stylized.
 
 Progress is saved per browser and origin. Local and hosted versions have separate saves; use Field Notes to export/import between them. Desktop keyboard and mouse are recommended. Containers and volumes are deliberately stylized for a short playable incremental arc, rather than physically accurate evaporation.
 
@@ -40,3 +40,5 @@ Every installed automation item now has its own visible rig and numbered namepla
 Three.js is MIT licensed; license is bundled in dist/vendor/THREE-LICENSE.txt.
 
 The bathtub and larger basins now sit entirely above the yard. Larger stages have raised viewing decks and access stairs; the bathtub and pool have glass fronts that expose the falling water volume. The deck-mounted FULL/EMPTY gauge stays above the rim and uses the same fill fraction as the water. Orange machine pipes pass over the rim, and offshore platforms remain above full water level.
+
+Shops face the water at every scale, with their interaction points and collision bounds following the entrance. Shop lettering is fixed to the signboards so it cannot swivel into the backing at oblique viewing angles. The field office has been removed.

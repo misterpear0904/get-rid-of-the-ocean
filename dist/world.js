@@ -43,9 +43,14 @@ export function createWorld(canvas,options={}){
  function crate(x,z){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);box(.8,.65,.7,M.wood,0,.325,0,g);for(const yy of [.1,.55])box(.85,.07,.74,M.darkwood,0,yy,0,g);return g;}
  nearProps.push(crate(-13,8),crate(-13.6,8.4));const nearPalms=[palm(16,5,1.15),palm(-16,-10,1.2)];
  const stores={};
- function store(id,title,subtitle,color){const group=new THREE.Group();scene.add(group);box(4.5,.17,3.8,M.wood,0,.09,0,group);for(const x of [-2,2])for(const z of [-1.5,1.5])box(.13,2.8,.13,M.darkwood,x,1.4,z,group);box(4.3,1.25,.22,M.green,0,.7,-1.6,group);box(4.5,.8,.7,M.white,0,.5,1.1,group);box(4.7,.12,.95,M.wood,0,.95,1.1,group);
+ // Flat lettering stays parallel to its backing instead of turning into it with the camera.
+ function shopLabel(text,scale,size,color,x,y,z,parent,name){
+  const sprite=textSprite(text,{scale,size,color}),material=new THREE.MeshBasicMaterial({map:sprite.material.map,transparent:true,depthWrite:false,side:THREE.DoubleSide,alphaTest:.01});
+  const label=mesh(new THREE.PlaneGeometry(scale,scale*192/1024),material,x,y,z,parent);label.name=name;label.userData.ownsTexture=true;label.castShadow=false;sprite.material.dispose();return label;
+ }
+ function store(id,title,subtitle,color){const group=new THREE.Group();group.name='shop-'+id;scene.add(group);box(4.5,.17,3.8,M.wood,0,.09,0,group);for(const x of [-2,2])for(const z of [-1.5,1.5])box(.13,2.8,.13,M.darkwood,x,1.4,z,group);box(4.3,1.25,.22,M.green,0,.7,-1.6,group);box(4.5,.8,.7,M.white,0,.5,1.1,group);box(4.7,.12,.95,M.wood,0,.95,1.1,group);
  const roof=box(5,.16,4.2,mat(color),0,2.85,0,group);roof.rotation.x=.04;for(let i=0;i<8;i++)box(.25,.17,4.2,M.white,-2.17+i*.62,2.88,0,group);
- box(4.7,.55,.15,mat(color),0,2.51,2.05,group);const sign=textSprite(title,{scale:4.2,size:57});sign.position.set(0,2.55,2.17);group.add(sign);const sub=textSprite(subtitle,{scale:3.6,size:37,color:'#173a30'});sub.position.set(0,.63,1.5);group.add(sub);
+ box(4.7,.55,.15,mat(color),0,2.51,2.05,group);shopLabel(title,4.2,57,'#f3eee0',0,2.55,2.15,group,'shop-title-'+id);shopLabel(subtitle,3.6,37,'#173a30',0,.63,1.48,group,'shop-subtitle-'+id);
  const light=mesh(new THREE.SphereGeometry(.13,10,8),M.yellow,1.7,2.25,1.7,group);const npc=new THREE.Group();npc.position.set(.4,.17,.15);group.add(npc);box(.56,.65,.33,M.green,0,.78,0,npc);mesh(new THREE.SphereGeometry(.23,12,10),mat('#d6a879'),0,1.33,0,npc);cyl(.28,.28,.13,M.orange,0,1.52,0,npc,14);
  stores[id]={group,front:new THREE.Vector3(),title,light};return group;}
  const toolStore=store('tools','THE TOOL SHACK','MORE POWER. LESS WATER.','#e97943');
@@ -129,7 +134,10 @@ export function createWorld(canvas,options={}){
  // A burner lives directly beneath the small source, even before automation.
  if(i<2){cyl(i===0?.5:.76,i===0?.5:.76,.13,M.black,0,1.015,-4,container);addFlames(container,0,1.12,-4,i===0?.35:.6);}
  ground.name='yard-ground';const sx=hx+7.2;stores.tools.group.position.set(-sx,0,-5);stores.skills.group.position.set(sx,0,-5);stores.automation.group.position.set(-sx,0,5);
- for(const s of Object.values(stores)){s.front.copy(s.group.position).add(new THREE.Vector3(0,0,2.8));}
+ for(const s of Object.values(stores)){
+  s.group.rotation.y=Math.atan2(-s.group.position.x,-4-s.group.position.z);s.sin=Math.sin(s.group.rotation.y);s.cos=Math.cos(s.group.rotation.y);
+  s.front.set(s.group.position.x+s.sin*2.8,0,s.group.position.z+s.cos*2.8);
+ }
  player.position.set(i>=3?accessLayout(i).entryX:0,i>=3?LAYOUT[i].rim:0,-4+hz+(i<2?1.8:i>=3?1.7:1.4));yaw=0;pitch=i<2?-.32:i===2?-.5:-.35;renderer.shadowMap.needsUpdate=true;
  spectacle.buildStage(i,{bottom,top});setMachines(lastMachines);
  }
@@ -182,7 +190,7 @@ export function createWorld(canvas,options={}){
  function closestStore(){let best=null,dist=3.2;for(const [id,s]of storeEntries){const d=player.position.distanceTo(s.front);if(d<dist){dist=d;best=id;}}return best;}
  function setDestination(id){destination=id;marker.visible=!!id;}
  function destPosition(){if(!destination)return null;if(destination==='trophies')return spectacle.trophyPosition;if(destination==='water')return waterDestination.set(0,0,-4+bounds.hz+2);return stores[destination]?.front;}
- function tryStep(x,z){const height=walkableHeight(stage,x,z,currentFraction,player.position.y);if(height===null)return false;for(const s of storeList)if(Math.abs(x-s.group.position.x)<2.5&&Math.abs(z-s.group.position.z)<1.9&&height>-.5)return false;player.position.set(x,height,z);return true;}
+ function tryStep(x,z){const height=walkableHeight(stage,x,z,currentFraction,player.position.y);if(height===null)return false;for(const s of storeList){const dx=x-s.group.position.x,dz=z-s.group.position.z;if(Math.abs(dx*s.cos-dz*s.sin)<2.5&&Math.abs(dx*s.sin+dz*s.cos)<1.9&&height>-.5)return false;}player.position.set(x,height,z);return true;}
  function update(dt,time,fraction,working,autoOn,canMove=true){currentFraction=fraction;
  if(previewType!==null){previewPlacement(previewType);previewMaterial.color.set(nearWater()?'#60e5ae':'#f2a55f');previewMaterial.opacity=.65+Math.sin(time*5)*.15;}
  waterMat.uniforms.time.value=time;surface.position.y=bottom+(top-bottom)*fraction;surface.scale.setScalar(stage>=4?.62+.38*fraction:1);surface.visible=fraction>.00001;waterOutline.position.y=surface.position.y+.015;waterOutline.scale.setScalar(stage>=4?.62+.38*fraction:1);waterOutline.visible=surface.visible;levelMarker.position.y=gaugeBottom+(gaugeTop-gaugeBottom)*fraction;gaugeFill.scale.y=Math.max(.001,(gaugeTop-gaugeBottom)*fraction);gaugeFill.position.y=gaugeBottom+gaugeFill.scale.y/2;gaugeFill.visible=fraction>.00001;
@@ -218,7 +226,7 @@ export function createWorld(canvas,options={}){
   for(const [material,objects]of batches){if(objects.length<2)continue;const geometries=objects.map(o=>{const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(inverse.clone().multiply(o.matrixWorld));return g;});const merged=mergeGeometries(geometries,false);for(const g of geometries)g.dispose();if(!merged)continue;for(const o of objects){o.parent.remove(o);o.geometry.dispose();}const combined=new THREE.Mesh(merged,material);combined.castShadow=true;combined.receiveShadow=true;combined.updateMatrix();combined.matrixAutoUpdate=false;group.add(combined);}
  }
  const staticMeshCount=()=>{let count=0;environment.traverse(o=>{if(o.isMesh)count++;});return count;};
- const optimization={before:staticMeshCount()};batchStatic(environment,new Set([sea,ground,islandBase,...nearProps,...nearPalms]));for(const s of Object.values(stores))batchStatic(s.group);optimization.after=staticMeshCount();
+ const optimization={before:staticMeshCount()};batchStatic(environment,new Set([sea,ground,islandBase,...nearProps,...nearPalms]));for(const s of Object.values(stores))batchStatic(s.group,new Set(s.group.children.filter(c=>c.name.startsWith('shop-title-')||c.name.startsWith('shop-subtitle-'))));optimization.after=staticMeshCount();
  const spectacle=createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat,batchStatic});
  buildStage(0);applySettings(preferences);
  return {scene,camera,renderer,keys,player,buildStage,setTool,setMachines,setDestination,nearWater,closestStore,update,applySettings,releaseLook,enableLook,optimization,previewPlacement,setProgress:spectacle.setTrophies,commissioning:spectacle.commissioning,sampleFrame,getPerformance};

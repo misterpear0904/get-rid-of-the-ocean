@@ -85,3 +85,29 @@ test('two boilers are separate numbered models and adding a third keeps their po
 test('large collections retain every physical machine while nearby detail stays bounded',()=>{
  const world=createWorld(canvas,{rendererFactory:fakeRenderer});world.buildStage(5);world.setMachines([25,25,25,25,25]);world.update(.3,1,1,false,true,false);let units=0,labels=0;world.scene.getObjectByName('visible-automation').traverse(o=>{if(o.userData.identifier)units++;if(o.isSprite&&o.userData.unitKey&&o.visible)labels++;});assert.equal(units,125);assert.ok(labels<=16);const settings=defaultSettings();settings.quality='low';world.applySettings(settings);world.update(.3,1.3,1,false,true,false);labels=0;world.scene.getObjectByName('visible-automation').traverse(o=>{if(o.isSprite&&o.userData.unitKey&&o.visible)labels++;});assert.ok(labels<=10);
 });
+
+test('shop entrances face the water and interaction follows their rotation at every stage',()=>{
+ const world=createWorld(canvas,{rendererFactory:fakeRenderer});
+ for(let stage=0;stage<6;stage++){
+  world.buildStage(stage);world.update(.016,0,1,false,false,false);assert.equal(world.scene.getObjectByName('human-scale-door'),undefined);
+  for(const id of ['tools','skills','automation']){
+   const shop=world.scene.getObjectByName('shop-'+id),forward=new THREE.Vector3(0,0,1).applyQuaternion(shop.quaternion),towardWater=new THREE.Vector3(-shop.position.x,0,-4-shop.position.z).normalize();
+   assert.ok(forward.dot(towardWater)>.99999);world.player.position.copy(shop.position).addScaledVector(forward,2.8);assert.equal(world.closestStore(),id);
+   world.keys.add('KeyW');const before=world.player.position.clone();world.player.position.copy(shop.position);world.update(.016,0,1,false,false,true);assert.ok(world.player.position.distanceTo(shop.position)<1e-9,'rotated stall collision blocks movement');world.keys.clear();world.player.position.copy(before);
+  }
+ }
+});
+test('shop lettering remains on the sign face and unoccluded from oblique front angles',()=>{
+ const world=createWorld(canvas,{rendererFactory:fakeRenderer});world.buildStage(3);world.update(.016,0,1,false,false,false);
+ for(const id of ['tools','skills','automation']){
+  const shop=world.scene.getObjectByName('shop-'+id);
+  for(const prefix of ['shop-title-','shop-subtitle-']){
+   const label=world.scene.getObjectByName(prefix+id);assert.equal(label.isSprite,undefined);assert.equal(label.material.side,THREE.DoubleSide);
+   const target=label.getWorldPosition(new THREE.Vector3());
+   for(const angle of [-75,-45,0,45,75]){
+    const radians=angle*Math.PI/180,offset=new THREE.Vector3(Math.sin(radians)*4,0,Math.cos(radians)*4).applyQuaternion(shop.quaternion),origin=target.clone().add(offset),ray=new THREE.Raycaster(origin,offset.clone().negate().normalize());
+    const hits=ray.intersectObject(shop,true);assert.equal(hits[0]?.object,label,`${id} ${prefix} at ${angle} degrees`);
+   }
+  }
+ }
+});

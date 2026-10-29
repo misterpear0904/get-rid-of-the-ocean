@@ -15,8 +15,8 @@ export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat
  function rail(x,z,length,alongX=true,parent=landmarks){for(const n of [-.5,0,.5])box(.055,1,.055,M.white,x+(alongX?n*length:0),.5,z+(alongX?0:n*length),parent);box(alongX?length:.055,.055,alongX?.055:length,M.white,x,.95,z,parent);}
  function buildStage(i,geometry){stage=i;machineSites=[];bounds=LAYOUT[i];bottom=geometry.bottom;top=geometry.top;clear(landmarks);actors=[];metrics.landmarks=0;
   const {hx,hz,floor,rim}=bounds;
-  // A person, 2.2m door, and one-metre railings never grow with the basin.
-  worker(-hx-3,-4+hz+1);const hut=new THREE.Group();hut.name='human-scale-door';hut.position.set(hx+3,0,-4+hz+1);landmarks.add(hut);box(2.1,2.5,1.3,M.white,0,1.25,0,hut);box(.9,2.2,.04,M.green,0,1.1,.67,hut);box(2.4,.15,1.6,M.orange,0,2.55,0,hut);sign('FIELD OFFICE',0,2.9,.7,2,hut);const deckRails=new THREE.Group();deckRails.position.y=i>=3?rim:0;landmarks.add(deckRails);rail(hx*.5,-4+hz+.55,3,true,deckRails);
+  // A person and one-metre railings never grow with the basin.
+  worker(-hx-3,-4+hz+1);const deckRails=new THREE.Group();deckRails.position.y=i>=3?rim:0;landmarks.add(deckRails);rail(hx*.5,-4+hz+.55,3,true,deckRails);
   sign(i<2?'ONE LIGHTER. ONE VERY SMALL START.':i===3?'24 METRES ACROSS · SAME LITTLE LIGHTER':i===4?'LAKE LASTDROP · 44 METRES ACROSS':'88 METRES OF OCEAN · WALK THE SHORE',0,i>=3?rim+2.6:3.7,-4+hz+1.5,i<2?3:6);
   if(i>=3){
    const {entryX,deck,rampLength}=accessLayout(i),n=Math.ceil(rim/.18);
