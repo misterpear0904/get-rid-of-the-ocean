@@ -1,4 +1,4 @@
-import {LAYOUT,shoreRadius} from './terrain.js';
+import {LAYOUT,shoreRadius,accessLayout} from './terrain.js';
 
 const SIZES=[.65,.65,1,1.35,1.6,1.8];
 const MIN_PITCH=1.8;
@@ -6,7 +6,8 @@ const MIN_PITCH=1.8;
 function validSite(stage,x,z,size){
  if(x < -52+size||x > 52-size||z < -50+size||z > 49-size)return false;
  const {hx,hz}=LAYOUT[stage];
- const sourceGap=stage<2?.25:1;
+ const sourceGap=stage<2?.25:stage>=3?accessLayout(stage).deck:1;
+ if(stage>=3){const a=accessLayout(stage);if(Math.abs(x-a.entryX)<1.25+size&&z+4>hz+a.deck-size&&z+4<hz+a.deck+a.rampLength+size)return false;}
  if(Math.abs(x)<hx+size+sourceGap&&Math.abs(z+4)<hz+size+sourceGap)return false;
  const shops=[[-hx-7.2,-5], [hx+7.2,-5],[-hx-7.2,5]];
  if(shops.some(([sx,sz])=>Math.abs(x-sx)<3.2+size&&Math.abs(z-sz)<2.5+size))return false;

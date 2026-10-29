@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {automationLayout,offshoreSites} from '../dist/automation-layout.js';
-import {LAYOUT,shoreRadius} from '../dist/terrain.js';
+import {LAYOUT,shoreRadius,accessLayout} from '../dist/terrain.js';
 
 const maximum=[25,25,25,25,25];
 const SIZES=[.65,.65,1,1.35,1.6,1.8];
@@ -13,7 +13,9 @@ test('maximum 125 assignments fit each stage on dry, bounded, spaced sites',()=>
   assert.equal(new Set(sites.map(s=>s.key)).size,125);
   for(let i=0;i<sites.length;i++){
    const s=sites[i];assert.ok(s.x>=-52&&s.x<=52&&s.z>=-50&&s.z<=49,`bounds ${stage} ${s.key}`);
-   const sourceGap=stage<2?.25:1;assert.ok(!(Math.abs(s.x)<hx+s.size+sourceGap&&Math.abs(s.z+4)<hz+s.size+sourceGap),`water ${stage} ${s.key}`);
+   const sourceGap=stage<2?.25:stage>=3?accessLayout(stage).deck:1;
+   if(stage>=3){const a=accessLayout(stage);assert.ok(!(Math.abs(s.x-a.entryX)<1.25+s.size&&s.z+4>hz+a.deck-s.size&&s.z+4<hz+a.deck+a.rampLength+s.size));}
+   assert.ok(!(Math.abs(s.x)<hx+s.size+sourceGap&&Math.abs(s.z+4)<hz+s.size+sourceGap),`water ${stage} ${s.key}`);
    assert.equal(s.size,SIZES[stage]);
    for(let j=0;j<i;j++)assert.ok(Math.hypot(s.x-sites[j].x,s.z-sites[j].z)>=pitch-1e-6,`spacing ${stage} ${s.key}/${sites[j].key}`);
   }

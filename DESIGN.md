@@ -18,7 +18,7 @@ The opening lighter clears the cup in about 42 seconds of continuous work. The f
 
 ## Graphics and feedback
 
-Warm coastal greens, ceramic cream, orange workwear, mint water, and a low-poly workyard. Third-person movement lets a physically tiny cup become an increasingly enormous basin. A custom animated water shader, shadows, steam particles, held tools, suction beams, rotating machinery, and a descending water surface support progression. Water exists within a hollow container; the ground has a real hole for sunk basins. Each stage has a distinct silhouette: handled cup, metal stockpot, bathtub with faucet, tiled pool with ladder, lake, and ocean with a sunken boat.
+Warm coastal greens, ceramic cream, orange workwear, mint water, and a low-poly workyard. First-person movement lets a physically tiny cup become an increasingly enormous basin. A custom animated water shader, shadows, steam particles, held tools, suction beams, rotating machinery, and a descending water surface support progression. Water exists within a hollow container; the bathtub and larger basins have raised floors above solid ground, retaining walls, viewing decks and access stairs. Each stage has a distinct silhouette: handled cup, metal stockpot, bathtub with faucet, tiled pool with ladder, lake, and ocean with a sunken boat.
 
 ## Scope and balance
 
@@ -38,7 +38,7 @@ Models remain statically batched. At most sixteen nearby nameplates (ten in Low)
 
 Heaters stay underneath, with visible apparatus outside the basin connected by orange pipes and animated light. Boilers vent steam, pumps pour water into troughs, bucket bots shuttle, and solar arrays cast a beam. Offshore platforms and cooling stacks make the final operation read as industrial infrastructure. One additional instanced effect mesh serves all automated exhaust/discharge, and static new machinery and landmarks are batched by material.
 
-The pool, lake, and ocean now span 24, 44, and 88 world-metres, while workers remain 1.9m tall and field-office doors 2.2m. Pure terrain rules match the pool entry steps and organic shores: wet areas and unsafe drops are blocked, dry steps lead down and back out, and the camera follows floor height. Exposed ruins and a 13m shipwreck reward walking the drained space. The original-size cup, stockpot, and bathtub persist in a trophy yard reached through a dedicated navigation button.
+The pool, lake, and ocean now span 24, 44, and 88 world-metres, while workers remain 1.9m tall and field-office doors 2.2m. Pure terrain rules match the pool entry steps and organic shores: wet areas and unsafe drops are blocked, dry steps lead down and back out, and the camera follows floor height. Exposed ruins and a 13m shipwreck reward walking the drained space. The original-size cup, stockpot, and bathtub persist in a trophy yard reached on foot or through the trophy destination hotkey.
 
 Each newly installed machine has one commissioning burst: min(4% of container capacity, eight seconds of upgraded machine output). It removes actual water and pays proportional income immediately, so saving/reloading cannot repeat it. A brief HUD highlight and message call attention to the drop. A bounded Luna review supplied independent acceptance-test suggestions and identified repeated commissioning and stale world coordinates as implementation risks; both have checks.
 
@@ -66,3 +66,5 @@ Luna provided an independent small-task economy review. Its pacing suggestions i
 - Branch machines into heat, suction, or logistics, each with a different visual footprint and terrain interaction.
 - Add a water destination: pipe the removed ocean into a ludicrously oversized space aquarium.
 - Add optional challenge contracts such as no automation, scoop-only, and a timed tiny-flame voyage.
+
+Raised-source revision: shared water elevations keep the bathtub, pool, lake and ocean above grade. Larger gauges map 0–100% to a fixed, readable instrument above the viewing deck; their floats no longer disappear underground. Rectangular sources have transparent front walls and descending side volumes. Shore contours match the water geometry; exterior stairs connect the shops to the deck, and interior steps or banks open as water falls. Machine pipes rise over the rim and ocean decks stand above the full waterline.

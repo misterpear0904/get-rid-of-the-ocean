@@ -38,3 +38,5 @@ The stutter revision removes the active-play frame-skipping limiter, defers peri
 Every installed automation item now has its own visible rig and numbered nameplate (BOILER #01, BOILER #02, etc.), with separate pipes and outlets. New units use spaced dry sites around the source, and existing units keep their locations while you add more. Offshore machinery also receives individual platforms. Static equipment remains batched; nearby labels and moving details are limited to keep large collections responsive. All 125 possible installed machines can be represented individually. Existing saves automatically use the new display without changing ownership or output.
 
 Three.js is MIT licensed; license is bundled in dist/vendor/THREE-LICENSE.txt.
+
+The bathtub and larger basins now sit entirely above the yard. Larger stages have raised viewing decks and access stairs; the bathtub and pool have glass fronts that expose the falling water volume. The deck-mounted FULL/EMPTY gauge stays above the rim and uses the same fill fraction as the water. Orange machine pipes pass over the rim, and offshore platforms remain above full water level.

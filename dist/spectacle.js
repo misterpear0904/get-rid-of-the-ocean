@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {LAYOUT} from './terrain.js';
+import {LAYOUT,accessLayout} from './terrain.js';
 import {automationLayout,offshoreSites} from './automation-layout.js';
 
 export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat,batchStatic}){
@@ -14,13 +14,19 @@ export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat
  function worker(x,z,parent=landmarks){const g=new THREE.Group();g.name='human-scale-worker';g.userData.height=1.9;g.position.set(x,0,z);parent.add(g);box(.48,.65,.28,M.orange,0,1.05,0,g);for(const a of [-.14,.14])box(.17,.65,.23,M.green,a,.4,0,g);mesh(new THREE.SphereGeometry(.22,10,8),mat('#d9ac7b'),0,1.6,0,g);cyl(.29,.29,.12,M.yellow,0,1.83,0,g,10);return g;}
  function rail(x,z,length,alongX=true,parent=landmarks){for(const n of [-.5,0,.5])box(.055,1,.055,M.white,x+(alongX?n*length:0),.5,z+(alongX?0:n*length),parent);box(alongX?length:.055,.055,alongX?.055:length,M.white,x,.95,z,parent);}
  function buildStage(i,geometry){stage=i;machineSites=[];bounds=LAYOUT[i];bottom=geometry.bottom;top=geometry.top;clear(landmarks);actors=[];metrics.landmarks=0;
-  const {hx,hz,floor}=bounds;
+  const {hx,hz,floor,rim}=bounds;
   // A person, 2.2m door, and one-metre railings never grow with the basin.
-  worker(-hx-3,-4+hz+1);const hut=new THREE.Group();hut.name='human-scale-door';hut.position.set(hx+3,0,-4+hz+1);landmarks.add(hut);box(2.1,2.5,1.3,M.white,0,1.25,0,hut);box(.9,2.2,.04,M.green,0,1.1,.67,hut);box(2.4,.15,1.6,M.orange,0,2.55,0,hut);sign('FIELD OFFICE',0,2.9,.7,2,hut);rail(hx*.5,-4+hz+.55,3);
-  sign(i<2?'ONE LIGHTER. ONE VERY SMALL START.':i===3?'24 METRES ACROSS · SAME LITTLE LIGHTER':i===4?'LAKE LASTDROP · 44 METRES ACROSS':'88 METRES OF OCEAN · WALK THE SHORE',0,3.7,-4+hz+1.5,i<2?3:6);
+  worker(-hx-3,-4+hz+1);const hut=new THREE.Group();hut.name='human-scale-door';hut.position.set(hx+3,0,-4+hz+1);landmarks.add(hut);box(2.1,2.5,1.3,M.white,0,1.25,0,hut);box(.9,2.2,.04,M.green,0,1.1,.67,hut);box(2.4,.15,1.6,M.orange,0,2.55,0,hut);sign('FIELD OFFICE',0,2.9,.7,2,hut);const deckRails=new THREE.Group();deckRails.position.y=i>=3?rim:0;landmarks.add(deckRails);rail(hx*.5,-4+hz+.55,3,true,deckRails);
+  sign(i<2?'ONE LIGHTER. ONE VERY SMALL START.':i===3?'24 METRES ACROSS · SAME LITTLE LIGHTER':i===4?'LAKE LASTDROP · 44 METRES ACROSS':'88 METRES OF OCEAN · WALK THE SHORE',0,i>=3?rim+2.6:3.7,-4+hz+1.5,i<2?3:6);
+  if(i>=3){
+   const {entryX,deck,rampLength}=accessLayout(i),n=Math.ceil(rim/.18);
+   const stairs=new THREE.Group();stairs.name='raised-basin-access';landmarks.add(stairs);
+   for(let k=0;k<n;k++){const h=rim*(1-k/n);box(2.4,h,rampLength/n+.02,M.white,entryX,h/2,-4+hz+deck+(k+.5)*rampLength/n,stairs);}
+   sign('UP TO THE WATER',entryX,1.2,-4+hz+deck+rampLength+.5,3.6);
+  }
   if(i===3){
-   const length=5.5,n=12,x=-hx*.55;for(let k=0;k<n;k++){const z=-4+hz-(k+.5)*length/n,y=floor+(0-floor)*(1-k/n);box(2.4,.15,length/n+.015,M.white,x,y-.075,z,landmarks);}
-   sign('WALK DOWN AS THE WATER FALLS',x,1.5,-4+hz+1.1,3.8);rail(x-1.4,-4+hz-.5,3,false);
+   const length=5.5,n=12,x=-hx*.55;for(let k=0;k<n;k++){const z=-4+hz-(k+.5)*length/n,y=floor+(rim-floor)*(1-k/n);box(2.4,.15,length/n+.015,M.white,x,y-.075,z,landmarks);}
+   sign('WALK DOWN AS THE WATER FALLS',x,rim+1.5,-4+hz+1.1,3.8);rail(x-1.4,-4+hz-.5,3,false,deckRails);
    for(let k=0;k<5;k++){const marker=box(.18,.02,hz*2-.5,M.green,-hx+2+k*4,floor+.025,-4,landmarks);marker.name='pool-lane';}
   }
   if(i>=4){
@@ -28,7 +34,7 @@ export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat
    const ruins=new THREE.Group();ruins.name='exposed-ruins';ruins.position.set(2,floor,-5);landmarks.add(ruins);
    for(let n=0;n<4;n++){cyl(.35,.42,2.5,M.sand,(n%2)*3,1.25,Math.floor(n/2)*3,ruins,8);}box(4,.35,4,M.sand,1.5,2.6,1.5,ruins);box(5,.2,5,M.stone,1.5,.1,1.5,ruins);
    for(let n=0;n<5;n++)box(.7,.12,.6,M.stone,-3+n*.9,floor+.06,2,landmarks);
-   sign('FOLLOW THE EXPOSED SHORE TO THE RUINS',-hx*.35,1.3,-4+hz+1.2,5);
+   sign('FOLLOW THE EXPOSED SHORE TO THE RUINS',-hx*.35,rim+1.3,-4+hz+1.2,5);
   }
   if(i===5){
    const ship=new THREE.Group();ship.name='emerging-shipwreck';ship.position.set(-11,floor+.15,-8);ship.rotation.y=.35;landmarks.add(ship);
@@ -56,15 +62,16 @@ export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat
    else{cyl(.55,.65,1.3,type===4?M.yellow:M.green,0,.9,0,chassis);box(.8,.5,.8,M.metal,0,1.7,0,chassis);if(type===4){const lens=mesh(new THREE.SphereGeometry(.95,12,7),M.metal,0,2.6,0,chassis);lens.scale.y=.18;}}
    // The visible apparatus connects to the heater/intake kept below the source.
    const platformSite=stage===5&&type>=2?offshore[index*3+type-2]:null;
-   const intake=new THREE.Vector3(stage<2?((index%3)-1)*.13+type*.05:platformSite?platformSite.x:(type-2)*hx*.15+((index%5)-2)*.4,stage<2?1.03:bottom+.18,platformSite?platformSite.z:stage<2?-4+(Math.floor(index/3)%3-1)*.1:-4+hz*.1+Math.floor(index/5)*.15),elbow=new THREE.Vector3(x,stage<2?1.05:.7,z),aboveIntake=new THREE.Vector3(intake.x,elbow.y,intake.z);
+   const intake=new THREE.Vector3(stage<2?((index%3)-1)*.13+type*.05:platformSite?platformSite.x:(type-2)*hx*.15+((index%5)-2)*.4,stage<2?1.03:bottom+.18,platformSite?platformSite.z:stage<2?-4+(Math.floor(index/3)%3-1)*.1:-4+hz*.1+Math.floor(index/5)*.15),elbow=new THREE.Vector3(x,stage<2?1.05:top+.55,z),aboveIntake=new THREE.Vector3(intake.x,elbow.y,intake.z);
    if(stage===5&&type>=2){
-    const platform=new THREE.Group();platform.name='offshore-platform-'+type+(index?'-'+index:'');platform.userData.unitKey=unit.key;platform.position.set(intake.x,0,intake.z);platform.scale.set(.7,1,.7);plants.add(platform);
-    box(7,.3,6,M.darkwood,0,1.1,0,platform);for(const xx of [-2.6,2.6])for(const zz of [-2.2,2.2])cyl(.18,.25,6.2,M.metal,xx,-2,zz,platform,8);
+    const platform=new THREE.Group();platform.name='offshore-platform-'+type+(index?'-'+index:'');platform.userData.unitKey=unit.key;platform.position.set(intake.x,top-.45,intake.z);platform.scale.set(.7,1,.7);plants.add(platform);
+    box(7,.3,6,M.darkwood,0,1.1,0,platform);for(const xx of [-2.6,2.6])for(const zz of [-2.2,2.2])cyl(.18,.25,top-bottom+.71,M.metal,xx,1.1-(top-bottom+.71)/2,zz,platform,8);
     const railing=new THREE.Group();railing.position.y=1.3;platform.add(railing);rail(0,2.9,6,true,railing);rail(0,-2.9,6,true,railing);rail(-3.3,0,5,false,railing);rail(3.3,0,5,false,railing);
-    if(type===3){for(const xx of [-1.1,1.1]){cyl(.7,1.2,5,M.white,xx,3.7,0,platform,12);outlets.push({kind:'steam',x:intake.x+xx,y:6.3,z:intake.z,type});}}
+    if(type===3){for(const xx of [-1.1,1.1]){cyl(.7,1.2,5,M.white,xx,3.7,0,platform,12);outlets.push({kind:'steam',x:intake.x+xx,y:top+5.85,z:intake.z,type});}}
     else{box(3,2,2.5,type===4?M.yellow:M.green,0,2.3,0,platform);cyl(.15,.2,4.8,M.orange,2,3.5,0,platform,8);box(4.5,.2,.2,M.orange,.5,5.8,0,platform);}
     const plate=sign(identifier,0,7.8,0,4.4,platform);plate.userData.unitKey=unit.key;plate.visible=false;labels.push({mesh:plate,x:intake.x,z:intake.z,key:unit.key,distance:Infinity,secondary:true});
    }
+   if(stage>=2)lineBetween(new THREE.Vector3(x,.7,z),elbow,.065*size,M.orange,plants);
    rig.userData.intake=intake.toArray();rig.userData.pipeStart=elbow.toArray();
    lineBetween(elbow,aboveIntake,.065*size,M.orange,plants);lineBetween(aboveIntake,intake,.065*size,M.orange,plants);
    const conduit=mesh(new THREE.CylinderGeometry(.075*size,.075*size,1,6),glow,0,0,0,moving);conduit.name='flowing-conduit';actors.push({unitKey:unit.key,kind:'conduit',mesh:conduit,a:elbow,b:aboveIntake,type});
@@ -73,7 +80,7 @@ export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat
    lineBetween(new THREE.Vector3(x,.8*size,z),new THREE.Vector3(dischargeX,.8*size,dischargeZ),.11*size,M.metal,plants);outlets.push({kind:type===0||type===3?'steam':'water',x:dischargeX,y:.8*size,z:dischargeZ,type});
    if(type!==0&&type!==3){const trough=box(.8*size,.12,.7*size,M.white,dischargeX,.08,dischargeZ+.15*size,plants);const stream=box(.5*size,.035,.55*size,water,dischargeX,.16,dischargeZ+.15*size,moving);actors.push({unitKey:unit.key,kind:'stream',mesh:stream,type});}
    if(type===1){const bot=new THREE.Group();bot.name='working-bucket-bot';moving.add(bot);box(.45,.5,.4,M.yellow,0,.5,0,bot);cyl(.22,.17,.35,M.metal,0,.6,-.45,bot,10);actors.push({unitKey:unit.key,kind:'bot',mesh:bot,x,z,type,size});}
-   if(type===4){const sunbeam=mesh(new THREE.CylinderGeometry(.2,.7,12,8),beamMat,intake.x,6,intake.z,moving);actors.push({unitKey:unit.key,kind:'sunbeam',mesh:sunbeam,type});}
+   if(type===4){const sunbeam=mesh(new THREE.CylinderGeometry(.2,.7,12,8),beamMat,intake.x,top+6,intake.z,moving);actors.push({unitKey:unit.key,kind:'sunbeam',mesh:sunbeam,type});}
    const plate=sign(identifier,x,3.7*size+.15,z,Math.max(1.55,size*1.8),plants);plate.userData.unitKey=unit.key;plate.visible=false;labels.push({mesh:plate,x,z,key:unit.key,distance:Infinity,secondary:false});
   }batchStatic(plants,new Set());
  }

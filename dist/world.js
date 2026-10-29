@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {mergeGeometries} from './vendor/BufferGeometryUtils.js';
 import {defaultSettings} from './settings.js';
-import {LAYOUT,walkableHeight} from './terrain.js';
+import {LAYOUT,walkableHeight,accessLayout,waterRange} from './terrain.js';
 import {createSpectacle} from './spectacle.js';
 import {AdaptiveResolution,FrameStats} from './performance.js';
 
@@ -34,7 +34,7 @@ export function createWorld(canvas,options={}){
  makeGround(0,0,false);
  // The coast is deliberately built from warm, chunky, low-poly shapes.
  let seed=78;function rand(){seed=(seed*16807)%2147483647;return(seed-1)/2147483646;}
- function rock(x,z,r,parent=environment){const o=mesh(new THREE.DodecahedronGeometry(r,0),M.stone,x,r*.35,z,parent);o.scale.set(1,.65,.8);o.rotation.set(rand(),rand()*6,rand());}
+ function rock(x,z,r,parent=environment){const o=mesh(new THREE.DodecahedronGeometry(r,0),M.stone,x,r*.35,z,parent);o.scale.set(1,.65,.8);o.rotation.set(rand(),rand()*6,rand());return o;}
  function palm(x,z,s=1){const g=new THREE.Group();g.position.set(x,0,z);environment.add(g);const trunk=cyl(.12*s,.2*s,3.6*s,M.wood,.25*s,1.8*s,0,g,8);trunk.rotation.z=-.13;for(let i=0;i<7;i++){const a=i/7*Math.PI*2;const leaf=mesh(new THREE.SphereGeometry(1,7,4),i%2?M.leaf:M.lightleaf,Math.cos(a)*.85*s,3.65*s,Math.sin(a)*.85*s,g);leaf.scale.set(1.8*s,.09*s,.42*s);leaf.rotation.z=Math.cos(a)*-.25;leaf.rotation.y=-a;}cyl(.23*s,.23*s,.3*s,M.darkwood,.45*s,3.65*s,0,g,8);return g;}
  for(let i=0;i<38;i++){const a=rand()*Math.PI*2;const r=49+rand()*5;const x=Math.cos(a)*r,z=Math.sin(a)*r;if(i%3===0)palm(x,z,.8+rand()*.7);else rock(x,z,.45+rand()*1.2);}
  for(let i=0;i<12;i++){const x=(rand()-.5)*90,z=-47-rand()*6;const hill=mesh(new THREE.ConeGeometry(3+rand()*6,5+rand()*7,5),i%2?M.leaf:M.lightleaf,x,1,z);hill.rotation.y=rand()*6;}
@@ -67,9 +67,16 @@ export function createWorld(canvas,options={}){
  mesh(new THREE.ConeGeometry(.032,.17,6),new THREE.MeshBasicMaterial({color:'#fff1a0'}),0,.085,.012,lighterFlame).castShadow=false;
  mesh(new THREE.ConeGeometry(.035,.075,6),new THREE.MeshBasicMaterial({color:'#6fbfff'}),0,.035,.02,lighterFlame).castShadow=false;
  const targetPoint=new THREE.Vector3(0,0,-4);let stage=0,bounds={hx:1.6,hz:1.3},bottom=1.25,top=2.23;
- const container=new THREE.Group();scene.add(container);let surface,waterSide,relic,waterOutline,fullLine,levelMarker;const flameGroups=[];let levelGauge;let heat=0;const machinery=new THREE.Group();scene.add(machinery);const rotors=[];
+ const container=new THREE.Group();scene.add(container);let surface,waterSide,relic,waterOutline,fullLine,levelMarker,gaugeFill;const flameGroups=[];let levelGauge,gaugeBottom,gaugeTop;let heat=0;const machinery=new THREE.Group();scene.add(machinery);const rotors=[];
  function disposeChildren(group){const disposed=new Set();while(group.children.length){const child=group.children[0];child.traverse(o=>{o.geometry?.dispose();if(o.material&&!sharedMaterials.has(o.material)&&!disposed.has(o.material)){disposed.add(o.material);if(o.isSprite||o.userData.ownsTexture)o.material.map?.dispose();o.material.dispose();}});group.remove(child);}}
  function makeWater(g,baseY,topY){surface=mesh(g,waterMat,0,topY,-4,container);surface.name='active-water';surface.rotation.x=-Math.PI/2;surface.castShadow=false;bottom=baseY;top=topY;}
+ function raisedDeck(i,hx,hz,rim){
+  const {deck}=accessLayout(i),ox=hx+deck,oz=hz+deck,s=new THREE.Shape();s.moveTo(-ox,-oz);s.lineTo(ox,-oz);s.lineTo(ox,oz);s.lineTo(-ox,oz);s.closePath();
+  const hole=new THREE.Path();if(i>=4){for(let n=64;n>=0;n--){const v=shorePoint(n/64*Math.PI*2,hx+.2,hz+.2);if(n===64)hole.moveTo(v.x,v.y);else hole.lineTo(v.x,v.y);}}else{hole.moveTo(-hx-.2,-hz-.2);hole.lineTo(-hx-.2,hz+.2);hole.lineTo(hx+.2,hz+.2);hole.lineTo(hx+.2,-hz-.2);}hole.closePath();s.holes.push(hole);
+  const deckMesh=mesh(new THREE.ShapeGeometry(s),M.white,0,rim,-4,container);deckMesh.rotation.x=-Math.PI/2;deckMesh.name='raised-basin-deck';
+  for(const x of [-ox,ox])box(.2,rim,oz*2,M.stone,x,rim/2,-4,container);
+  for(const z of [-4-oz,-4+oz])box(ox*2,rim,.2,mat('#b2b99b',{transparent:true,opacity:z>0&&i===3?.23:1,depthWrite:!(z>0&&i===3)}),0,rim/2,z,container);
+ }
  function buildStage(i){stage=i;disposeChildren(container);waterSide=null;flameGroups.length=0;let hx=1.6,hz=1.3;bottom=1.25;top=2.23;
  if(i<2){makeGround(0,0,false);box(3.6,.17,2.7,M.wood,0,.86,-4,container);for(const x of [-1.4,1.4])for(const z of [-5,-3])box(.13,.82,.13,M.darkwood,x,.41,z,container);
  const r=i===0?.64:.93;const y=1.2;const h=i===0?1.1:1.25;const cm=i===0?M.white:M.metal;
@@ -83,39 +90,47 @@ export function createWorld(canvas,options={}){
  const plaque=textSprite(i===0?'THE FIRST 250 mL':'5 L OF AMBITION',{scale:2.2,size:48,color:'#f3eee0',bg:'#315b48'});
  box(2.3,.46,.06,M.darkwood,0,.54,-2.67,container);
  const label=mesh(new THREE.PlaneGeometry(2.2,.4125),new THREE.MeshBasicMaterial({map:plaque.material.map}),0,.54,-2.632,container);label.name='table-front-placard';label.userData.ownsTexture=true;label.castShadow=false;plaque.material.dispose();
- }else{hx=LAYOUT[i].hx;hz=LAYOUT[i].hz;bounds={hx,hz};makeGround(hx+.2,hz+.2,true,i>=4);const floorY=i===2?-1.05:i===3?-2.4:i===4?-3.7:-5;const wallMat=i===2?M.white:i===3?mat('#c8e0d7'):M.sand;const wallTop=i===2?.6:.1;const wallH=wallTop-floorY;
+ }else{hx=LAYOUT[i].hx;hz=LAYOUT[i].hz;bounds={hx,hz};makeGround(0,0,false);const floorY=LAYOUT[i].floor;const wallMat=i===2?M.white:i===3?mat('#c8e0d7'):M.sand;const wallTop=LAYOUT[i].rim;const wallH=wallTop-floorY;if(i>=3)raisedDeck(i,hx,hz,wallTop);
  if(i<4){
- box(hx*2,.18,hz*2,i<4?mat('#a9c7bd'):mat('#d7c58f'),0,floorY-.09,-4,container);
- box(.2,wallH,hz*2+.4,wallMat,-hx-.1,floorY+wallH/2,-4,container);box(.2,wallH,hz*2+.4,wallMat,hx+.1,floorY+wallH/2,-4,container);for(const z of [-4-hz-.1,-4+hz+.1])box(hx*2,wallH,.2,wallMat,0,floorY+wallH/2,z,container);
+ box(hx*2,.18,hz*2,mat('#a9c7bd'),0,floorY-.09,-4,container).name='basin-floor';
+ box(.2,wallH,hz*2+.4,wallMat,-hx-.1,floorY+wallH/2,-4,container);box(.2,wallH,hz*2+.4,wallMat,hx+.1,floorY+wallH/2,-4,container);box(hx*2,wallH,.2,wallMat,0,floorY+wallH/2,-4-hz-.1,container);
+ box(hx*2,wallH,.12,mat('#d7f4ed',{transparent:true,opacity:.15,depthWrite:false,side:THREE.DoubleSide}),0,floorY+wallH/2,-4+hz+.1,container).name='basin-viewing-window';
+ const sides=new THREE.BoxGeometry(hx*2-.05,1,hz*2-.05),indices=[];for(let face=0;face<6;face++)if(face!==2&&face!==3)for(let k=0;k<6;k++)indices.push(sides.index.getX(face*6+k));sides.setIndex(indices);
+ waterSide=mesh(sides,mat('#39acb9',{transparent:true,opacity:.55,depthWrite:false,side:THREE.DoubleSide}),0,0,-4,container);waterSide.name='water-level-window';waterSide.castShadow=false;
  for(const x of [-hx-.2,hx+.2])box(.35,.15,hz*2+.65,M.white,x,wallTop+.05,-4,container);for(const z of [-4-hz-.2,-4+hz+.2])box(hx*2+.8,.15,.35,M.white,0,wallTop+.05,z,container);
  }else{
- const floor=mesh(new THREE.ShapeGeometry(shoreShape(hx*.62,hz*.62)),mat('#d7c58f'),0,floorY,-4,container);floor.rotation.x=-Math.PI/2;
- const vertices=[];for(let n=0;n<64;n++){const a=shorePoint(n/64*Math.PI*2,hx+.2,hz+.2),b=shorePoint((n+1)/64*Math.PI*2,hx+.2,hz+.2);vertices.push(a.x,-.025,-4-a.y,b.x,-.025,-4-b.y,a.x*.62,floorY,-4-a.y*.62,b.x,-.025,-4-b.y,b.x*.62,floorY,-4-b.y*.62,a.x*.62,floorY,-4-a.y*.62);}
+ const floor=mesh(new THREE.ShapeGeometry(shoreShape(hx*.62,hz*.62)),mat('#d7c58f'),0,floorY,-4,container);floor.rotation.x=-Math.PI/2;floor.name='basin-floor';
+ const vertices=[];for(let n=0;n<64;n++){const a=shorePoint(n/64*Math.PI*2,hx+.2,hz+.2),b=shorePoint((n+1)/64*Math.PI*2,hx+.2,hz+.2);vertices.push(a.x,wallTop-.025,-4-a.y,b.x,wallTop-.025,-4-b.y,a.x*.62,floorY,-4-a.y*.62,b.x,wallTop-.025,-4-b.y,b.x*.62,floorY,-4-b.y*.62,a.x*.62,floorY,-4-a.y*.62);}
  const bank=new THREE.BufferGeometry();bank.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));bank.computeVertexNormals();mesh(bank,mat(i===5?'#d8c48e':'#bcbb8c',{side:THREE.DoubleSide}),0,0,0,container);
  }
- if(i===2){for(const x of [-1.7,1.7])for(const z of [-4.9,-3.1])cyl(.12,.17,.5,M.metal,x,.1,z,container,10);lineBetween(new THREE.Vector3(-1.7,.6,-5.1),new THREE.Vector3(-1.7,1.1,-5.1),.07,M.metal,container);lineBetween(new THREE.Vector3(-1.7,1.1,-5.1),new THREE.Vector3(-1.7,1.1,-4.7),.07,M.metal,container);}
- if(i===3){for(const z of [-5,-4]){lineBetween(new THREE.Vector3(hx-.5,-1.7,z),new THREE.Vector3(hx-.5,.7,z),.06,M.metal,container);}for(let y=-1.5;y<.5;y+=.4)lineBetween(new THREE.Vector3(hx-.5,y,-5),new THREE.Vector3(hx-.5,y,-4),.045,M.metal,container);for(let n=0;n<5;n++)box(.3,.015,hz*2-.5,mat('#4c8e8f'),-5+n*2.5,floorY+.015,-4,container);}
- if(i>=4){for(let n=0;n<16;n++){const a=n/16*Math.PI*2;rock(Math.cos(a)*(hx+1),-4+Math.sin(a)*(hz+1),.5+rand()*.6,container);}if(i===5){const boat=new THREE.Group();boat.position.set(-9,floorY+.3,-9);container.add(boat);const hull=box(4,.65,1.5,M.white,0,0,0,boat);hull.rotation.z=.12;box(1.3,.8,1.2,M.orange,.5,.7,0,boat);lineBetween(new THREE.Vector3(0,.5,0),new THREE.Vector3(0,4,0),.05,M.wood,boat);}}
- makeWater(i>=4?new THREE.ShapeGeometry(shoreShape(hx,hz)):new THREE.PlaneGeometry(hx*2-.05,hz*2-.05,Math.min(64,hx*4),Math.min(48,hz*4)),floorY+.06,wallTop-.08);
+ if(i===2){for(const x of [-1.7,1.7])for(const z of [-4.9,-3.1])cyl(.12,.17,floorY,M.metal,x,floorY/2,z,container,10);lineBetween(new THREE.Vector3(-1.7,wallTop,-5.1),new THREE.Vector3(-1.7,wallTop+.5,-5.1),.07,M.metal,container);lineBetween(new THREE.Vector3(-1.7,wallTop+.5,-5.1),new THREE.Vector3(-1.7,wallTop+.5,-4.7),.07,M.metal,container);}
+ if(i===3){for(const z of [-5,-4])lineBetween(new THREE.Vector3(hx-.5,floorY+.6,z),new THREE.Vector3(hx-.5,wallTop+.6,z),.06,M.metal,container);for(let y=floorY+.4;y<wallTop+.5;y+=.4)lineBetween(new THREE.Vector3(hx-.5,y,-5),new THREE.Vector3(hx-.5,y,-4),.045,M.metal,container);for(let n=0;n<5;n++)box(.3,.015,hz*2-.5,mat('#4c8e8f'),-5+n*2.5,floorY+.015,-4,container);}
+ if(i>=4){for(let n=0;n<16;n++){const a=n/16*Math.PI*2;rock(Math.cos(a)*(hx+1),-4+Math.sin(a)*(hz+1),.5+rand()*.6,container).position.y+=wallTop;}if(i===5){const boat=new THREE.Group();boat.position.set(-9,floorY+.3,-9);container.add(boat);const hull=box(4,.65,1.5,M.white,0,0,0,boat);hull.rotation.z=.12;box(1.3,.8,1.2,M.orange,.5,.7,0,boat);lineBetween(new THREE.Vector3(0,.5,0),new THREE.Vector3(0,4,0),.05,M.wood,boat);}}
+ makeWater(i>=4?new THREE.ShapeGeometry(shoreShape(hx,hz)):new THREE.PlaneGeometry(hx*2-.05,hz*2-.05,Math.min(64,hx*4),Math.min(48,hz*4)),waterRange(i).bottom,waterRange(i).top);
  }
  relic=new THREE.Group();relic.position.set(0,bottom+.1,-4);container.add(relic);if(i===2){mesh(new THREE.SphereGeometry(.25,12,8),M.yellow,0,.12,0,relic);mesh(new THREE.SphereGeometry(.15,12,8),M.yellow,.15,.35,0,relic);box(.13,.05,.08,M.orange,.31,.34,0,relic);}else if(i===5){const key=mesh(new THREE.TorusGeometry(.32,.07,8,20),M.yellow,0,.2,0,relic);key.rotation.x=Math.PI/2;box(.1,.1,.75,M.yellow,0,.2,.6,relic);box(.25,.1,.1,M.yellow,.1,.2,.8,relic);}else{const ring=mesh(new THREE.TorusGeometry(i===0?.14:.35,.045,8,20),M.yellow,0,.1,0,relic);ring.rotation.x=-Math.PI/2;box(.07,.07,i===0?.45:.8,M.metal,0,.1,.3,relic);}relic.visible=false;
  nearProps.forEach(p=>p.visible=i<3);nearPalms[0].position.x=Math.max(16,hx+7);nearPalms[1].position.x=-Math.max(16,hx+7);
  // High-contrast full line stays fixed; the white waterline and orange float descend.
- const outlineGeometry=i<2?new THREE.TorusGeometry(i===0?.61:.9,.018,4,48):i<4?new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-hx,0,-hz),new THREE.Vector3(hx,0,-hz),new THREE.Vector3(hx,0,hz),new THREE.Vector3(-hx,0,hz),new THREE.Vector3(-hx,0,-hz)]):new THREE.BufferGeometry().setFromPoints(Array.from({length:65},(_,n)=>{const v=shorePoint(n/64*Math.PI*2,hx,hz);return new THREE.Vector3(v.x,0,v.y);}));
+ const outlineGeometry=i<2?new THREE.TorusGeometry(i===0?.61:.9,.018,4,48):i<4?new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-hx,0,-hz),new THREE.Vector3(hx,0,-hz),new THREE.Vector3(hx,0,hz),new THREE.Vector3(-hx,0,hz),new THREE.Vector3(-hx,0,-hz)]):new THREE.BufferGeometry().setFromPoints(Array.from({length:65},(_,n)=>{const v=shorePoint(n/64*Math.PI*2,hx,hz);return new THREE.Vector3(v.x,0,-v.y);}));
  if(i<2){waterOutline=mesh(outlineGeometry,new THREE.MeshBasicMaterial({color:'#effffa'}),0,top+.01,-4,container);waterOutline.rotation.x=Math.PI/2;fullLine=mesh(outlineGeometry.clone(),new THREE.MeshBasicMaterial({color:'#f47543',transparent:true,opacity:.65}),0,top+.01,-4,container);fullLine.rotation.x=Math.PI/2;}
  else{waterOutline=new THREE.Line(outlineGeometry,new THREE.LineBasicMaterial({color:'#ecfffb'}));waterOutline.position.set(0,top+.01,-4);container.add(waterOutline);fullLine=new THREE.Line(outlineGeometry.clone(),new THREE.LineDashedMaterial({color:'#f47543',dashSize:.22,gapSize:.15,transparent:true,opacity:.7}));fullLine.position.set(0,top+.02,-4);fullLine.computeLineDistances();container.add(fullLine);}
  fullLine.name='original-full-line';
- const gx=i<2?1.2:hx+.6,gz=i<2?-3.5:-4+hz;
+ const gx=i<2?1.2:i===2?hx+.6:accessLayout(i).entryX+1,gz=i<2?-3.5:-4+hz+(i>=3?.05:0);
+ gaugeBottom=i>=3?LAYOUT[i].rim+1:bottom;gaugeTop=i>=3?gaugeBottom+1.6:top;
  levelGauge=new THREE.Group();container.add(levelGauge);levelGauge.position.set(gx,0,gz);
- box(.07,top-bottom+.12,.07,M.darkwood,0,(top+bottom)/2,0,levelGauge);
- for(let k=0;k<=4;k++)box(.24,.025,.06,k===4?M.orange:M.white,0,bottom+(top-bottom)*k/4,.02,levelGauge);
- levelMarker=mesh(new THREE.ConeGeometry(.13,.27,4),M.orange,-.24,top,0,levelGauge);levelMarker.rotation.z=-Math.PI/2;levelMarker.name='water-level-float';
- const fullLabel=textSprite('FULL',{scale:.8,size:54,color:'#e97943'});fullLabel.position.set(0,top+.25,0);levelGauge.add(fullLabel);
+ levelGauge.name='water-level-gauge';levelGauge.userData.range={bottom:gaugeBottom,top:gaugeTop};
+ if(i>=3)box(.07,1,.07,M.darkwood,0,LAYOUT[i].rim+.5,0,levelGauge);
+ box(.45,gaugeTop-gaugeBottom+.2,.08,M.white,0,(gaugeTop+gaugeBottom)/2,-.04,levelGauge);
+ box(.07,gaugeTop-gaugeBottom+.12,.07,M.darkwood,0,(gaugeTop+gaugeBottom)/2,0,levelGauge);
+ gaugeFill=box(.12,1,.04,mat('#39acb9'),.12,0,.06,levelGauge);gaugeFill.name='gauge-fill';
+ for(let k=0;k<=4;k++)box(.24,.025,.06,k===4?M.orange:M.green,0,gaugeBottom+(gaugeTop-gaugeBottom)*k/4,.02,levelGauge);
+ levelMarker=mesh(new THREE.ConeGeometry(.13,.27,4),M.orange,-.24,gaugeTop,0,levelGauge);levelMarker.rotation.z=-Math.PI/2;levelMarker.name='water-level-float';
+ const fullLabel=textSprite('FULL',{scale:1.1,size:72,color:'#b84620',bg:'#f3eee0'});fullLabel.name='gauge-full-label';fullLabel.position.set(0,gaugeTop+.25,0);levelGauge.add(fullLabel);if(i>=3){const emptyLabel=textSprite('EMPTY',{scale:1.1,size:65,color:'#315b48',bg:'#f3eee0'});emptyLabel.position.set(0,gaugeBottom-.18,0);levelGauge.add(emptyLabel);}
  // A burner lives directly beneath the small source, even before automation.
  if(i<2){cyl(i===0?.5:.76,i===0?.5:.76,.13,M.black,0,1.015,-4,container);addFlames(container,0,1.12,-4,i===0?.35:.6);}
  ground.name='yard-ground';const sx=hx+7.2;stores.tools.group.position.set(-sx,0,-5);stores.skills.group.position.set(sx,0,-5);stores.automation.group.position.set(-sx,0,5);
  for(const s of Object.values(stores)){s.front.copy(s.group.position).add(new THREE.Vector3(0,0,2.8));}
- player.position.set(0,0,-4+hz+(i<2?1.8:1.4));yaw=0;pitch=i<2?-.32:i===2?-.5:i===3?-.3:-.1;renderer.shadowMap.needsUpdate=true;
+ player.position.set(i>=3?accessLayout(i).entryX:0,i>=3?LAYOUT[i].rim:0,-4+hz+(i<2?1.8:i>=3?1.7:1.4));yaw=0;pitch=i<2?-.32:i===2?-.5:-.35;renderer.shadowMap.needsUpdate=true;
  spectacle.buildStage(i,{bottom,top});setMachines(lastMachines);
  }
  let lastMachines=[0,0,0,0,0];
@@ -170,7 +185,7 @@ export function createWorld(canvas,options={}){
  function tryStep(x,z){const height=walkableHeight(stage,x,z,currentFraction,player.position.y);if(height===null)return false;for(const s of storeList)if(Math.abs(x-s.group.position.x)<2.5&&Math.abs(z-s.group.position.z)<1.9&&height>-.5)return false;player.position.set(x,height,z);return true;}
  function update(dt,time,fraction,working,autoOn,canMove=true){currentFraction=fraction;
  if(previewType!==null){previewPlacement(previewType);previewMaterial.color.set(nearWater()?'#60e5ae':'#f2a55f');previewMaterial.opacity=.65+Math.sin(time*5)*.15;}
- waterMat.uniforms.time.value=time;surface.position.y=bottom+(top-bottom)*fraction;surface.scale.setScalar(stage>=4?.62+.38*fraction:1);surface.visible=fraction>.00001;waterOutline.position.y=surface.position.y+.015;waterOutline.scale.setScalar(stage>=4?.62+.38*fraction:1);waterOutline.visible=surface.visible;levelMarker.position.y=surface.position.y;
+ waterMat.uniforms.time.value=time;surface.position.y=bottom+(top-bottom)*fraction;surface.scale.setScalar(stage>=4?.62+.38*fraction:1);surface.visible=fraction>.00001;waterOutline.position.y=surface.position.y+.015;waterOutline.scale.setScalar(stage>=4?.62+.38*fraction:1);waterOutline.visible=surface.visible;levelMarker.position.y=gaugeBottom+(gaugeTop-gaugeBottom)*fraction;gaugeFill.scale.y=Math.max(.001,(gaugeTop-gaugeBottom)*fraction);gaugeFill.position.y=gaugeBottom+gaugeFill.scale.y/2;gaugeFill.visible=fraction>.00001;
  if(waterSide){waterSide.scale.y=Math.max(.001,surface.position.y-bottom);waterSide.position.y=bottom+waterSide.scale.y/2;waterSide.visible=surface.visible;}
  heat=THREE.MathUtils.lerp(heat,(working&&heldTool<3||autoOn&&lastMachines[0]>0)&&fraction>0?1:0,Math.min(1,dt*3));
  for(const flames of flameGroups){flames.visible=heat>.02;flames.scale.y=heat*(.9+Math.sin(time*19)*.13);}
