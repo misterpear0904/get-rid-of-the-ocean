@@ -10,7 +10,7 @@ export class MenuMouseLock {
  }
  changed(){
   const locked=this.isLocked(),lost=this.locked&&!locked,expected=this.unlockExpected;this.locked=locked;
-  if(!locked)this.unlockExpected=false;
+  if(!locked||!this.menuOpen)this.unlockExpected=false;
   // A delayed capture must not hide the cursor over a newly opened menu.
   if(locked&&this.menuOpen){this.unlockExpected=true;this.release();return;}
   if(lost&&!expected&&!this.menuOpen){this.restore=true;this.pause();}
