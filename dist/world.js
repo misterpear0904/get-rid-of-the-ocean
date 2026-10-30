@@ -8,7 +8,7 @@ import {AdaptiveResolution,FrameStats} from './performance.js';
 export function createWorld(canvas,options={}){
  const renderer=options.rendererFactory?options.rendererFactory():new THREE.WebGLRenderer({canvas,antialias:false,stencil:false,powerPreference:'high-performance'});
  renderer.setPixelRatio(1);renderer.shadowMap.enabled=false;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
- const scene=new THREE.Scene();scene.background=new THREE.Color('#d5e4d9');scene.fog=new THREE.Fog('#cbded5',65,180);
+ const scene=new THREE.Scene();scene.matrixAutoUpdate=false;scene.background=new THREE.Color('#d5e4d9');scene.fog=new THREE.Fog('#cbded5',65,180);
  let preferences=defaultSettings();
  const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.08,220);camera.rotation.order='YXZ';scene.add(camera);
  const environment=new THREE.Group();scene.add(environment);
@@ -74,6 +74,9 @@ export function createWorld(canvas,options={}){
  const targetPoint=new THREE.Vector3(0,0,-4);let stage=0,bounds={hx:1.6,hz:1.3},bottom=1.25,top=2.23;
  const container=new THREE.Group();scene.add(container);let surface,waterSide,relic,waterOutline,fullLine,levelMarker,gaugeFill;const flameGroups=[];let levelGauge,gaugeBottom,gaugeTop;let heat=0;const machinery=new THREE.Group();scene.add(machinery);const rotors=[];
  function disposeChildren(group){const disposed=new Set();while(group.children.length){const child=group.children[0];child.traverse(o=>{o.geometry?.dispose();if(o.material&&!sharedMaterials.has(o.material)&&!disposed.has(o.material)){disposed.add(o.material);if(o.isSprite||o.userData.ownsTexture)o.material.map?.dispose();o.material.dispose();}});group.remove(child);}}
+ function freezeStatic(group,excluded=new Set()){
+  group.traverse(o=>{if(!excluded.has(o)){o.updateMatrix();o.matrixAutoUpdate=false;}});
+ }
  function makeWater(g,baseY,topY){surface=mesh(g,waterMat,0,topY,-4,container);surface.name='active-water';surface.rotation.x=-Math.PI/2;surface.castShadow=false;bottom=baseY;top=topY;}
  function raisedDeck(i,hx,hz,rim){
   const {deck}=accessLayout(i),ox=hx+deck,oz=hz+deck,s=new THREE.Shape();s.moveTo(-ox,-oz);s.lineTo(ox,-oz);s.lineTo(ox,oz);s.lineTo(-ox,oz);s.closePath();
@@ -82,7 +85,7 @@ export function createWorld(canvas,options={}){
   for(const x of [-ox,ox])box(.2,rim,oz*2,M.stone,x,rim/2,-4,container);
   for(const z of [-4-oz,-4+oz])box(ox*2,rim,.2,mat('#b2b99b',{transparent:true,opacity:z>0&&i===3?.23:1,depthWrite:!(z>0&&i===3)}),0,rim/2,z,container);
  }
- function buildStage(i){stage=i;disposeChildren(container);waterSide=null;flameGroups.length=0;let hx=1.6,hz=1.3;bottom=1.25;top=2.23;
+ function buildStage(i){stage=i;heat=0;disposeChildren(container);waterSide=null;flameGroups.length=0;let hx=1.6,hz=1.3;bottom=1.25;top=2.23;
  if(i<2){makeGround(0,0,false);box(3.6,.17,2.7,M.wood,0,.86,-4,container);for(const x of [-1.4,1.4])for(const z of [-5,-3])box(.13,.82,.13,M.darkwood,x,.41,z,container);
  const r=i===0?.64:.93;const y=1.2;const h=i===0?1.1:1.25;const cm=i===0?M.white:M.metal;
  cyl(r,r,.1,cm,0,y,-4,container,48);
@@ -133,13 +136,14 @@ export function createWorld(canvas,options={}){
  const fullLabel=textSprite('FULL',{scale:1.1,size:72,color:'#b84620',bg:'#f3eee0'});fullLabel.name='gauge-full-label';fullLabel.position.set(0,gaugeTop+.25,0);levelGauge.add(fullLabel);if(i>=3){const emptyLabel=textSprite('EMPTY',{scale:1.1,size:65,color:'#315b48',bg:'#f3eee0'});emptyLabel.position.set(0,gaugeBottom-.18,0);levelGauge.add(emptyLabel);}
  // A burner lives directly beneath the small source, even before automation.
  if(i<2){cyl(i===0?.5:.76,i===0?.5:.76,.13,M.black,0,1.015,-4,container);addFlames(container,0,1.12,-4,i===0?.35:.6);}
+ freezeStatic(container,new Set([surface,waterSide,waterOutline,levelMarker,gaugeFill,relic,...flameGroups]));freezeStatic(ground);
  ground.name='yard-ground';const sx=hx+7.2;stores.tools.group.position.set(-sx,0,-5);stores.skills.group.position.set(sx,0,-5);stores.automation.group.position.set(-sx,0,5);
  for(const s of Object.values(stores)){
   s.group.rotation.y=Math.atan2(-s.group.position.x,-4-s.group.position.z);s.sin=Math.sin(s.group.rotation.y);s.cos=Math.cos(s.group.rotation.y);
-  s.front.set(s.group.position.x+s.sin*2.8,0,s.group.position.z+s.cos*2.8);
+  s.front.set(s.group.position.x+s.sin*2.8,0,s.group.position.z+s.cos*2.8);s.group.updateMatrix();
  }
  player.position.set(i>=3?accessLayout(i).entryX:0,i>=3?LAYOUT[i].rim:0,-4+hz+(i<2?1.8:i>=3?1.7:1.4));yaw=0;pitch=i<2?-.32:i===2?-.5:-.35;renderer.shadowMap.needsUpdate=true;
- spectacle.buildStage(i,{bottom,top});setMachines(lastMachines);
+ for(const palm of nearPalms)palm.updateMatrix();spectacle.buildStage(i,{bottom,top});setMachines(lastMachines);
  }
  let lastMachines=[0,0,0,0,0];
  const fireMaterial=new THREE.MeshBasicMaterial({color:'#ff9a35'});sharedMaterials.add(fireMaterial);
@@ -158,7 +162,7 @@ export function createWorld(canvas,options={}){
     else{box(.9,.3,.9,M.darkwood,0,.15,0,g);cyl(.38,.45,type===4?2.2:1.1,type===4?M.yellow:M.green,0,type===4?1.25:.85,0,g);const rot=mesh(new THREE.TorusGeometry(.27,.055,5,12),M.orange,.4,1,0,g);rot.rotation.y=Math.PI/2;rotors.push(rot);lineBetween(new THREE.Vector3(-.2,.7,0),new THREE.Vector3(-.6,.2,0),.09,M.metal,g);}
    }
    if(j===0){const label=textSprite(machineNames[type]+' · HEAT FEED',{scale:stage<2?1.9:2.6,size:42,color:'#e97943'});label.position.set(g.position.x,stage<2?.69:top+.45+(type%2)*.35,stage<2?-3.12:-4+bounds.hz-.15);machinery.add(label);}
-  }}spectacle.buildMachines(counts);renderer.shadowMap.needsUpdate=true;
+  }}batchStatic(machinery,new Set([...rotors,...flameGroups,...machinery.children.filter(o=>o.name==='boiler')]));freezeStatic(machinery,new Set([...rotors,...flameGroups]));spectacle.buildMachines(counts);renderer.shadowMap.needsUpdate=true;
  }
  const placementPreview=new THREE.Group();placementPreview.name='automation-placement-preview';placementPreview.visible=false;scene.add(placementPreview);
  const previewMaterial=new THREE.MeshBasicMaterial({color:'#60e5ae',wireframe:true,transparent:true,opacity:.85,depthTest:false,depthWrite:false});
@@ -171,7 +175,7 @@ export function createWorld(canvas,options={}){
  const beamMat=new THREE.MeshBasicMaterial({color:'#f0c96b',transparent:true,opacity:.5});const beam=mesh(new THREE.CylinderGeometry(.05,.13,1,10),beamMat,0,0,0,effects);beam.visible=false;
  const marker=new THREE.Group();scene.add(marker);const arrow=mesh(new THREE.ConeGeometry(.3,.6,4),M.orange,0,0,0,marker);arrow.rotation.z=Math.PI;marker.visible=false;
  let destination=null,yaw=0,pitch=-.32,dragging=false,lastPointer={x:0,y:0},inputEnabled=true;
- function mouseLook(dx,dy){if(!inputEnabled)return;const factor=.0025*preferences.sensitivity;yaw-=dx*factor;pitch=THREE.MathUtils.clamp(pitch-dy*factor*(preferences.invertY?-1:1),-1.45,1.35);}
+ let lastLook=-Infinity;function mouseLook(dx,dy){if(!inputEnabled)return;lastLook=performance.now();const factor=.0025*preferences.sensitivity;yaw-=dx*factor;pitch=THREE.MathUtils.clamp(pitch-dy*factor*(preferences.invertY?-1:1),-1.45,1.35);}
  canvas.addEventListener('contextmenu',e=>e.preventDefault());
  canvas.addEventListener('pointerdown',e=>{if(!inputEnabled)return;if(e.button===2){dragging=true;lastPointer={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);}else if(e.button===0&&document.pointerLockElement!==canvas){try{const result=canvas.requestPointerLock?.();result?.catch?.(()=>{});}catch{}}});
  canvas.addEventListener('pointermove',e=>{if(document.pointerLockElement===canvas)mouseLook(e.movementX,e.movementY);else if(dragging){mouseLook(e.clientX-lastPointer.x,e.clientY-lastPointer.y);lastPointer.x=e.clientX;lastPointer.y=e.clientY;}});
@@ -180,7 +184,7 @@ export function createWorld(canvas,options={}){
  function enableLook(){inputEnabled=true;}
  const resolution=new AdaptiveResolution(),frameStats=new FrameStats();let renderRatio=1,graphicsKey='';
  function applySettings(next){preferences=next;if(camera.fov!==next.fov){camera.fov=next.fov;camera.updateProjectionMatrix();}const key=next.quality+':'+(next.adaptiveResolution!==false);if(key===graphicsKey)return;graphicsKey=key;const high=next.quality==='high';const base=Math.min(devicePixelRatio,high?1.5:next.quality==='low'?.75:1);resolution.configure(base,next.quality==='low'?.5:high?.7:.6,next.adaptiveResolution!==false,performance.now());renderRatio=base;renderer.setPixelRatio(renderRatio);renderer.shadowMap.enabled=high;renderer.shadowMap.needsUpdate=high;waterMat.uniforms.detail.value=high?2:next.quality==='low'?0:1;resize();}
- function sampleFrame(ms,now,active=true){if(active)frameStats.record(ms);const next=resolution.sample(ms,now,active);if(next!==null){renderRatio=next;renderer.setPixelRatio(renderRatio);}}
+ function sampleFrame(ms,now,active=true,targetMs=1000/60){if(active)frameStats.record(ms);const next=resolution.sample(ms,now,active,targetMs);if(next!==null){renderRatio=next;renderer.setPixelRatio(renderRatio);}}
  const performanceInfo={fps:0,p95:0,resolution:100,drawCalls:0};
  function getPerformance(now){const stats=frameStats.read(now);performanceInfo.fps=stats.fps;performanceInfo.p95=stats.p95;performanceInfo.resolution=Math.round(renderRatio/resolution.base*100);performanceInfo.drawCalls=renderer.info?.render?.calls||0;return performanceInfo;}
  const storeList=Object.values(stores),storeEntries=Object.entries(stores),waterDestination=new THREE.Vector3();const frameState={nearWater:true,store:null,destinationDistance:0,heat:0,levelDrop:0,exposedArea:0,machineCount:0,commissioning:0};let currentFraction=1;
@@ -207,7 +211,7 @@ export function createWorld(canvas,options={}){
  lighterFlame.position.set(0,heldTool===2?.3:.265,heldTool===2?-.49:0);
  lighterFlame.scale.set(1+Math.sin(time*31)*.1,.9+Math.sin(time*23)*.17+Math.sin(time*47)*.07,1+Math.cos(time*29)*.08);
  lighterFlame.rotation.z=Math.sin(time*17)*.1;
- camera.position.set(player.position.x,player.position.y+2.95,player.position.z);camera.rotation.set(pitch,yaw,0,'YXZ');camera.updateMatrixWorld(true);
+ camera.position.set(player.position.x,player.position.y+2.95,player.position.z);camera.rotation.set(pitch,yaw,0,'YXZ');
  const pos=destPosition();if(pos){marker.position.copy(pos);marker.position.y=2.8+Math.sin(time*3)*.18;marker.rotation.y=time;}
  for(let i=0;i<rotors.length;i++){if(autoOn){rotors[i].rotation.z+=dt*(3+i);rotors[i].scale.setScalar(1+Math.sin(time*6+i)*.04);}}
  effectTime+=dt;
@@ -227,7 +231,8 @@ export function createWorld(canvas,options={}){
  }
  const staticMeshCount=()=>{let count=0;environment.traverse(o=>{if(o.isMesh)count++;});return count;};
  const optimization={before:staticMeshCount()};batchStatic(environment,new Set([sea,ground,islandBase,...nearProps,...nearPalms]));for(const s of Object.values(stores))batchStatic(s.group,new Set(s.group.children.filter(c=>c.name.startsWith('shop-title-')||c.name.startsWith('shop-subtitle-'))));optimization.after=staticMeshCount();
- const spectacle=createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat,batchStatic});
+ freezeStatic(environment);for(const s of Object.values(stores))freezeStatic(s.group);
+ const spectacle=createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat,batchStatic,freezeStatic});
  buildStage(0);applySettings(preferences);
- return {scene,camera,renderer,keys,player,buildStage,setTool,setMachines,setDestination,nearWater,closestStore,update,applySettings,releaseLook,enableLook,optimization,previewPlacement,setProgress:spectacle.setTrophies,commissioning:spectacle.commissioning,sampleFrame,getPerformance};
+ return {scene,camera,renderer,keys,player,buildStage,setTool,setMachines,setDestination,nearWater,closestStore,update,applySettings,releaseLook,enableLook,optimization,previewPlacement,setProgress:spectacle.setTrophies,commissioning:spectacle.commissioning,sampleFrame,getPerformance,isLooking:(now)=>dragging||now-lastLook<200};
 }

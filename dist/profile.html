@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Ocean performance lab</title><style>body{margin:0;background:#173a30;color:white;font:16px system-ui}canvas{position:fixed;inset:0;width:100%;height:100%}aside{position:relative;background:#173a30ee;max-width:850px;padding:20px}pre{white-space:pre-wrap}button{padding:12px}</style></head><body><canvas id="world"></canvas><aside><h1>Ocean performance lab</h1><p>Runs real WebGL scenes without reading or changing your save. Results include CPU submission time, frame pacing, draw calls and graphics renderer.</p><label>Frame limit <select id="limit"><option value="60">60 FPS</option><option value="30">30 FPS</option><option value="0">Unlimited</option></select></label> <button id="run">Run profile</button><pre id="results">Ready</pre></aside><script type="module">
+import {createWorld} from './world.js';
+import {defaultSettings} from './settings.js';
+import {FramePacer} from './performance.js';
+const output=document.querySelector('#results'),button=document.querySelector('#run');let world;
+button.onclick=async()=>{button.disabled=true;try{
+world??=createWorld(document.querySelector('canvas'));const settings=defaultSettings();settings.adaptiveResolution=false;world.applySettings(settings);
+const gl=world.renderer.getContext(),debug=gl.getExtension('WEBGL_debug_renderer_info'),renderer=debug?gl.getParameter(debug.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);
+const frameLimit=Number(document.querySelector('#limit').value),results={renderer,frameLimit,viewport:[innerWidth,innerHeight],scenarios:[]};
+for(const [stage,active,counts]of [[0,false,[0,0,0,0,0]],[0,true,[1,1,1,1,1]],[5,true,[25,25,25,25,25]]]){
+output.textContent='Profiling stage '+stage+' …';world.buildStage(stage);world.setMachines(counts);const samples=[],gaps=[];let previous=performance.now();const pacer=new FramePacer();
+for(let i=0;i<150;i++){let now;do{await new Promise(requestAnimationFrame);now=performance.now();}while(!pacer.ready(now,frameLimit));const gap=now-previous;previous=now;const start=performance.now();world.update(Math.min(.1,gap/1000),now/1000,.6,active,active,false);const cost=performance.now()-start;if(i>=30){samples.push(cost);gaps.push(gap);}}
+samples.sort((a,b)=>a-b);gaps.sort((a,b)=>a-b);results.scenarios.push({stage,active,machines:counts.reduce((a,b)=>a+b,0),measuredFPS:+(1000/(gaps.reduce((a,b)=>a+b,0)/gaps.length)).toFixed(1),submitMsPerSecond:+(samples.reduce((a,b)=>a+b,0)/gaps.reduce((a,b)=>a+b,0)*1000).toFixed(1),medianSubmitMs:+samples[60].toFixed(2),p95SubmitMs:+samples[114].toFixed(2),medianFrameMs:+gaps[60].toFixed(2),p95FrameMs:+gaps[114].toFixed(2),drawCalls:world.renderer.info.render.calls,triangles:world.renderer.info.render.triangles});
+}output.textContent=JSON.stringify(results,null,2);
+}catch(e){output.textContent=e.stack;}button.disabled=false;};
+</script></body></html>

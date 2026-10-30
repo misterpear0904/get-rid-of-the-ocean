@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import {LAYOUT,accessLayout} from './terrain.js';
 import {automationLayout,offshoreSites} from './automation-layout.js';
 
-export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat,batchStatic}){
+export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat,batchStatic,freezeStatic}){
  const landmarks=new THREE.Group(),plants=new THREE.Group(),moving=new THREE.Group(),trophyYard=new THREE.Group();
  landmarks.name='scale-landmarks';plants.name='visible-automation';moving.name='automation-motion';trophyYard.name='trophy-yard';scene.add(landmarks,plants,moving,trophyYard);
  const glow=new THREE.MeshBasicMaterial({color:'#ffac4d'}),water=new THREE.MeshBasicMaterial({color:'#67e0ed'}),beamMat=new THREE.MeshBasicMaterial({color:'#fff1a0',transparent:true,opacity:.22,depthWrite:false});
@@ -40,7 +40,7 @@ export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat
    const ship=new THREE.Group();ship.name='emerging-shipwreck';ship.position.set(-11,floor+.15,-8);ship.rotation.y=.35;landmarks.add(ship);
    box(13,1.25,3.2,M.darkwood,0,.7,0,ship);box(11.5,.15,3,M.wood,0,1.45,0,ship);box(3.8,1.9,2.5,M.white,1.7,2.4,0,ship);for(let n=0;n<4;n++)box(.55,.55,.05,M.green,.3+n*.8,2.6,1.28,ship);cyl(.09,.12,3.8,M.darkwood,-2,2.8,0,ship,8);rail(0,1.5,10,true,ship);rail(0,-1.5,10,true,ship);
   }
-  batchStatic(landmarks,new Set());metrics.landmarks=landmarks.children.length;setTrophies(trophies,true);
+  batchStatic(landmarks,new Set());freezeStatic(landmarks);metrics.landmarks=landmarks.children.length;setTrophies(trophies,true);
  }
  function setTrophies(list,force=false){const key=list.join(',');trophies=[...list];if(key===progressKey&&!force)return;progressKey=key;clear(trophyYard);trophyPosition.set(0,0,-4+bounds.hz+9);trophyYard.position.copy(trophyPosition);
   sign('WHERE IT ALL STARTED',0,2.9,0,4.5,trophyYard);
@@ -50,7 +50,7 @@ export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat
    sign(['THE FIRST 250 mL','THE 5 L STOCKPOT','180 L. GONE.'][i],0,2.2,0,2.8,g);
   }
   if(!list.length)sign('YOUR EMPTY CUP WILL LIVE HERE',0,1.3,0,4,trophyYard);
-  batchStatic(trophyYard,new Set(trophyYard.children.filter(c=>c.name.startsWith('cleared-container-'))));
+  batchStatic(trophyYard,new Set(trophyYard.children.filter(c=>c.name.startsWith('cleared-container-'))));freezeStatic(trophyYard);
  }
  function buildMachines(counts){clear(plants);clear(moving);actors=[];outlets=[];labels=[];animatedUnits.clear();labelElapsed=1;metrics.machines=counts.reduce((a,b)=>a+b,0);coloursDirty=true;const {hx,hz}=bounds;
   machineSites=automationLayout(stage,counts,machineSites);
@@ -82,7 +82,7 @@ export function createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat
    if(type===1){const bot=new THREE.Group();bot.name='working-bucket-bot';moving.add(bot);box(.45,.5,.4,M.yellow,0,.5,0,bot);cyl(.22,.17,.35,M.metal,0,.6,-.45,bot,10);actors.push({unitKey:unit.key,kind:'bot',mesh:bot,x,z,type,size});}
    if(type===4){const sunbeam=mesh(new THREE.CylinderGeometry(.2,.7,12,8),beamMat,intake.x,top+6,intake.z,moving);actors.push({unitKey:unit.key,kind:'sunbeam',mesh:sunbeam,type});}
    const plate=sign(identifier,x,3.7*size+.15,z,Math.max(1.55,size*1.8),plants);plate.userData.unitKey=unit.key;plate.visible=false;labels.push({mesh:plate,x,z,key:unit.key,distance:Infinity,secondary:false});
-  }batchStatic(plants,new Set());
+  }batchStatic(plants,new Set());freezeStatic(plants);
  }
  const particles=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.09,0),new THREE.MeshBasicMaterial({color:'#ffffff'}),96);particles.name='automation-discharge';particles.frustumCulled=false;particles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(particles);
  const transform=new THREE.Object3D(),direction=new THREE.Vector3(),mid=new THREE.Vector3(),up=new THREE.Vector3(0,1,0),white=new THREE.Color('#eef8e7'),blue=new THREE.Color('#50cfe3');let simulationTime=0,particleElapsed=0,coloursDirty=true;const frameInfo={pulse:0,machineCount:0,exposedArea:0};

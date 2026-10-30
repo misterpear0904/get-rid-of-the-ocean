@@ -111,3 +111,10 @@ test('shop lettering remains on the sign face and unoccluded from oblique front 
   }
  }
 });
+
+test('static scenery skips local transform work while water and camera still move',()=>{
+ const world=createWorld(canvas,{rendererFactory:fakeRenderer});world.buildStage(3);world.update(.016,1,1,false,false,false);
+ const deck=world.scene.getObjectByName('raised-basin-deck'),water=world.scene.getObjectByName('active-water');let recalculations=0;const original=deck.updateMatrix;deck.updateMatrix=function(){recalculations++;return original.call(this);};
+ const originalHeight=water.getWorldPosition(new THREE.Vector3()).y;for(let i=0;i<60;i++)world.update(1/60,1+i/60,.5,false,false,false);
+ assert.equal(recalculations,0);assert.ok(water.getWorldPosition(new THREE.Vector3()).y<originalHeight);assert.equal(world.camera.position.y,world.player.position.y+2.95);
+});
