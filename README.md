@@ -9,7 +9,7 @@ Run `start-game.cmd`, or run `npm start` in this folder and open http://127.0.0.
 ## Controls
 
 - WASD: walk in first person. Shift: run.
-- Click the world to capture the mouse and look around, or right-drag without capture. Escape releases capture.
+- Click the world to capture the mouse and look around, or right-drag without capture. Escape opens the pause menu and releases capture. Closing a menu restores mouse look when it was active before. Automation placement keeps capture active.
 - Hold Space, left mouse while captured, or the work button near the water: remove water and earn money.
 - E at a shop counter: buy upgrades. Escape: close a panel or pause.
 - The gear button opens Settings: remap every gameplay key, change sensitivity, invert vertical look, adjust field of view, or choose Low / Balanced / High graphics. Settings persist separately from your voyage save.

@@ -179,9 +179,10 @@ export function createWorld(canvas,options={}){
  let destination=null,yaw=0,pitch=-.32,dragging=false,lastPointer={x:0,y:0},inputEnabled=true;
  let lastLook=-Infinity;function mouseLook(dx,dy){if(!inputEnabled)return;lastLook=performance.now();const factor=.0025*preferences.sensitivity;yaw-=dx*factor;pitch=THREE.MathUtils.clamp(pitch-dy*factor*(preferences.invertY?-1:1),-1.45,1.35);}
  canvas.addEventListener('contextmenu',e=>e.preventDefault());
- canvas.addEventListener('pointerdown',e=>{if(!inputEnabled)return;if(e.button===2){dragging=true;lastPointer={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);}else if(e.button===0&&document.pointerLockElement!==canvas){try{const result=canvas.requestPointerLock?.();result?.catch?.(()=>{});}catch{}}});
+ canvas.addEventListener('pointerdown',e=>{if(!inputEnabled)return;if(e.button===2){dragging=true;lastPointer={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);}else if(e.button===0)captureLook();});
  canvas.addEventListener('pointermove',e=>{if(document.pointerLockElement===canvas)mouseLook(e.movementX,e.movementY);else if(dragging){mouseLook(e.clientX-lastPointer.x,e.clientY-lastPointer.y);lastPointer.x=e.clientX;lastPointer.y=e.clientY;}});
  canvas.addEventListener('pointerup',()=>dragging=false);canvas.addEventListener('pointercancel',()=>dragging=false);
+ function captureLook(){if(!inputEnabled||document.pointerLockElement===canvas)return;try{const result=canvas.requestPointerLock?.();result?.catch?.(()=>{});}catch{}}
  function releaseLook(){inputEnabled=false;dragging=false;if(document.pointerLockElement===canvas)document.exitPointerLock?.();}
  function enableLook(){inputEnabled=true;}
  const resolution=new AdaptiveResolution(),frameStats=new FrameStats();let renderRatio=1,graphicsKey='';
@@ -244,5 +245,5 @@ export function createWorld(canvas,options={}){
  freezeStatic(environment);for(const s of Object.values(stores))freezeStatic(s.group);
  const spectacle=createSpectacle({scene,mesh,box,cyl,lineBetween,textSprite,M,mat,batchStatic,freezeStatic});
  buildStage(0);applySettings(preferences);
- return {scene,camera,renderer,keys,player,buildStage,setTool,setMachines,setDestination,nearWater,closestStore,update,applySettings,releaseLook,enableLook,optimization,previewPlacement,setProgress:spectacle.setTrophies,commissioning:spectacle.commissioning,sampleFrame,getPerformance,isLooking:(now)=>dragging||now-lastLook<200};
+ return {scene,camera,renderer,keys,player,buildStage,setTool,setMachines,setDestination,nearWater,closestStore,update,applySettings,captureLook,releaseLook,enableLook,optimization,previewPlacement,setProgress:spectacle.setTrophies,commissioning:spectacle.commissioning,sampleFrame,getPerformance,isLooking:(now)=>dragging||now-lastLook<200};
 }

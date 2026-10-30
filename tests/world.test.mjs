@@ -132,3 +132,9 @@ test('power scoop strokes move the held tool and settle when released',()=>{
  const world=createWorld(canvas,{rendererFactory:fakeRenderer});world.setTool(3);world.update(.1,1,.8,true,false,false);const held=world.scene.getObjectByName('held-tool'),start=held.position.clone();world.update(.1,1.3,.8,true,false,false);assert.ok(held.position.distanceTo(start)>.02);assert.ok(Math.abs(held.rotation.x)>.01);
  for(let i=0;i<20;i++)world.update(.1,2+i*.1,.8,false,false,false);assert.ok(Math.abs(held.position.y+.34)<1e-6);assert.ok(Math.abs(held.rotation.x)<1e-6);
 });
+
+test('mouse look can only recapture after menu input is enabled again',()=>{
+ let requests=0,releases=0;const previous=document.exitPointerLock,c={...canvas,requestPointerLock(){requests++;document.pointerLockElement=c;}};
+ document.pointerLockElement=null;document.exitPointerLock=()=>{releases++;document.pointerLockElement=null;};
+ try{const world=createWorld(c,{rendererFactory:fakeRenderer});world.captureLook();assert.equal(requests,1);world.captureLook();assert.equal(requests,1);world.releaseLook();assert.equal(releases,1);world.captureLook();assert.equal(requests,1);world.enableLook();world.captureLook();assert.equal(requests,2);}finally{document.exitPointerLock=previous;document.pointerLockElement=null;}
+});
