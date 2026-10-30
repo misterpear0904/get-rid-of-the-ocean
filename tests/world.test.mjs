@@ -118,3 +118,17 @@ test('static scenery skips local transform work while water and camera still mov
  const originalHeight=water.getWorldPosition(new THREE.Vector3()).y;for(let i=0;i<60;i++)world.update(1/60,1+i/60,.5,false,false,false);
  assert.equal(recalculations,0);assert.ok(water.getWorldPosition(new THREE.Vector3()).y<originalHeight);assert.equal(world.camera.position.y,world.player.position.y+2.95);
 });
+
+test('manual tools have tiered flames, reusable water impact and no camera shake',()=>{
+ const world=createWorld(canvas,{rendererFactory:fakeRenderer}),impact=world.scene.getObjectByName('manual-water-impact'),geometry=impact.geometry,flame=world.scene.getObjectByName('held-lighter-flame');let last=0;
+ world.update(.016,1,.8,false,false,false);const camera=world.camera.position.clone();
+ for(let tool=0;tool<8;tool++){
+  world.setTool(tool);world.update(.016,1,.8,true,false,false);assert.equal(impact.visible,true);assert.equal(impact.geometry,geometry);assert.ok(Math.abs(impact.position.y-world.scene.getObjectByName('active-water').position.y-.035)<1e-9);assert.deepEqual(world.camera.position.toArray(),camera.toArray());
+  if(tool<3){assert.equal(flame.visible,true);assert.ok(flame.scale.y>last);last=flame.scale.y;}else assert.equal(flame.visible,false);
+ }
+ world.update(.016,2,.8,false,false,false);assert.equal(impact.visible,false);assert.equal(flame.visible,false);world.update(.016,3,0,true,false,false);assert.equal(impact.visible,false);
+});
+test('power scoop strokes move the held tool and settle when released',()=>{
+ const world=createWorld(canvas,{rendererFactory:fakeRenderer});world.setTool(3);world.update(.1,1,.8,true,false,false);const held=world.scene.getObjectByName('held-tool'),start=held.position.clone();world.update(.1,1.3,.8,true,false,false);assert.ok(held.position.distanceTo(start)>.02);assert.ok(Math.abs(held.rotation.x)>.01);
+ for(let i=0;i<20;i++)world.update(.1,2+i*.1,.8,false,false,false);assert.ok(Math.abs(held.position.y+.34)<1e-6);assert.ok(Math.abs(held.rotation.x)<1e-6);
+});

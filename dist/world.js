@@ -61,7 +61,7 @@ export function createWorld(canvas,options={}){
  cyl(.25,.3,.5,M.metal,-1,1.2,1,autoStore);box(.4,.2,.35,M.green,-.3,1.1,1,autoStore);
  // First-person body anchor stays on the ground; hands and tools follow the camera.
  const player=new THREE.Group();scene.add(player);
- const held=new THREE.Group();held.position.set(.34,-.34,-.63);held.scale.setScalar(.8);camera.add(held);
+ const held=new THREE.Group();held.name='held-tool';held.position.set(.34,-.34,-.63);held.scale.setScalar(.8);camera.add(held);
  const hand=box(.16,.19,.26,mat('#d9ac7b'),0,-.23,.1,held);hand.castShadow=false;
  let heldTool=0;function setTool(i){if(heldTool===i&&held.children.length>1)return;heldTool=i;disposeChildren(held);box(.16,.19,.26,mat('#d9ac7b'),0,-.23,.1,held).castShadow=false;if(i<3){box(.16,.32,.13,i===0?M.orange:M.metal,0,0,0,held);cyl(.06,.06,.13,M.metal,0,.2,0,held,12);if(i===2)lineBetween(new THREE.Vector3(0,.22,0),new THREE.Vector3(0,.3,-.45),.055,M.metal,held);}else if(i===3){lineBetween(new THREE.Vector3(),new THREE.Vector3(0,-.1,-.8),.04,M.wood,held);const bucket=cyl(.3,.23,.35,M.metal,0,-.1,-.9,held);bucket.rotation.x=.7;}else{const tube=cyl(.15,.18,.8,i>5?M.yellow:M.green,0,.08,-.35,held);tube.rotation.x=Math.PI/2;cyl(.22,.22,.15,M.metal,0,.08,-.77,held).rotation.x=Math.PI/2;box(.12,.35,.15,M.black,0,-.13,-.1,held);}}
  setTool(0);
@@ -72,7 +72,7 @@ export function createWorld(canvas,options={}){
  mesh(new THREE.ConeGeometry(.032,.17,6),new THREE.MeshBasicMaterial({color:'#fff1a0'}),0,.085,.012,lighterFlame).castShadow=false;
  mesh(new THREE.ConeGeometry(.035,.075,6),new THREE.MeshBasicMaterial({color:'#6fbfff'}),0,.035,.02,lighterFlame).castShadow=false;
  const targetPoint=new THREE.Vector3(0,0,-4);let stage=0,bounds={hx:1.6,hz:1.3},bottom=1.25,top=2.23;
- const container=new THREE.Group();scene.add(container);let surface,waterSide,relic,waterOutline,fullLine,levelMarker,gaugeFill;const flameGroups=[];let levelGauge,gaugeBottom,gaugeTop;let heat=0;const machinery=new THREE.Group();scene.add(machinery);const rotors=[];
+ const container=new THREE.Group();scene.add(container);let surface,waterSide,relic,waterOutline,fullLine,levelMarker,gaugeFill;const flameGroups=[];let levelGauge,gaugeBottom,gaugeTop;let heat=0,manualBlend=0,workKick=0,wasWorking=false;const machinery=new THREE.Group();scene.add(machinery);const rotors=[];
  function disposeChildren(group){const disposed=new Set();while(group.children.length){const child=group.children[0];child.traverse(o=>{o.geometry?.dispose();if(o.material&&!sharedMaterials.has(o.material)&&!disposed.has(o.material)){disposed.add(o.material);if(o.isSprite||o.userData.ownsTexture)o.material.map?.dispose();o.material.dispose();}});group.remove(child);}}
  function freezeStatic(group,excluded=new Set()){
   group.traverse(o=>{if(!excluded.has(o)){o.updateMatrix();o.matrixAutoUpdate=false;}});
@@ -85,7 +85,7 @@ export function createWorld(canvas,options={}){
   for(const x of [-ox,ox])box(.2,rim,oz*2,M.stone,x,rim/2,-4,container);
   for(const z of [-4-oz,-4+oz])box(ox*2,rim,.2,mat('#b2b99b',{transparent:true,opacity:z>0&&i===3?.23:1,depthWrite:!(z>0&&i===3)}),0,rim/2,z,container);
  }
- function buildStage(i){stage=i;heat=0;disposeChildren(container);waterSide=null;flameGroups.length=0;let hx=1.6,hz=1.3;bottom=1.25;top=2.23;
+ function buildStage(i){stage=i;heat=0;manualBlend=0;workKick=0;wasWorking=false;disposeChildren(container);waterSide=null;flameGroups.length=0;let hx=1.6,hz=1.3;bottom=1.25;top=2.23;
  if(i<2){makeGround(0,0,false);box(3.6,.17,2.7,M.wood,0,.86,-4,container);for(const x of [-1.4,1.4])for(const z of [-5,-3])box(.13,.82,.13,M.darkwood,x,.41,z,container);
  const r=i===0?.64:.93;const y=1.2;const h=i===0?1.1:1.25;const cm=i===0?M.white:M.metal;
  cyl(r,r,.1,cm,0,y,-4,container,48);
@@ -173,6 +173,8 @@ export function createWorld(canvas,options={}){
  const effects=new THREE.Group();scene.add(effects);const particleLimit=36;const particles=Array.from({length:particleLimit},()=>({life:0,position:new THREE.Vector3(),velocity:new THREE.Vector3(),size:1}));
  const steam=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.07,0),new THREE.MeshBasicMaterial({color:'#dcf4ed'}),particleLimit);steam.frustumCulled=false;steam.visible=false;steam.castShadow=false;steam.instanceMatrix.setUsage(THREE.DynamicDrawUsage);effects.add(steam);const particleTransform=new THREE.Object3D();let emission=0,particleCursor=0,liveParticles=false,effectTime=0;
  const beamMat=new THREE.MeshBasicMaterial({color:'#f0c96b',transparent:true,opacity:.5});const beam=mesh(new THREE.CylinderGeometry(.05,.13,1,10),beamMat,0,0,0,effects);beam.visible=false;
+ const impactMaterial=new THREE.MeshBasicMaterial({color:'#fff2ae',transparent:true,opacity:.7,depthWrite:false});
+ const manualImpact=mesh(new THREE.TorusGeometry(.5,.025,4,32),impactMaterial,0,0,-4,effects);manualImpact.name='manual-water-impact';manualImpact.rotation.x=Math.PI/2;manualImpact.visible=false;manualImpact.castShadow=false;
  const marker=new THREE.Group();scene.add(marker);const arrow=mesh(new THREE.ConeGeometry(.3,.6,4),M.orange,0,0,0,marker);arrow.rotation.z=Math.PI;marker.visible=false;
  let destination=null,yaw=0,pitch=-.32,dragging=false,lastPointer={x:0,y:0},inputEnabled=true;
  let lastLook=-Infinity;function mouseLook(dx,dy){if(!inputEnabled)return;lastLook=performance.now();const factor=.0025*preferences.sensitivity;yaw-=dx*factor;pitch=THREE.MathUtils.clamp(pitch-dy*factor*(preferences.invertY?-1:1),-1.45,1.35);}
@@ -206,20 +208,28 @@ export function createWorld(canvas,options={}){
  if(canMove){vec.set(0,0,0);if(keys.has(preferences.bindings.forward))vec.z-=1;if(keys.has(preferences.bindings.backward))vec.z+=1;if(keys.has(preferences.bindings.left))vec.x-=1;if(keys.has(preferences.bindings.right))vec.x+=1;
  if(vec.lengthSq()){vec.normalize().applyAxisAngle(up,yaw);const speed=(keys.has(preferences.bindings.sprint)?8:5.2)*dt;candidate.copy(player.position).addScaledVector(vec,speed);walking=tryStep(candidate.x,candidate.z);if(!walking){walking=tryStep(candidate.x,player.position.z);walking=tryStep(player.position.x,candidate.z)||walking;}}}
  const view=spectacle.update(dt,time,fraction,autoOn,preferences.quality,player.position);
- held.rotation.x=working?Math.sin(time*9)*.045:0;
- toolEffects.rotation.copy(held.rotation);lighterFlame.visible=working&&heldTool<3&&fraction>0;
+ const manualActive=working&&fraction>0;
+ if(manualActive&&!wasWorking)workKick=.045;wasWorking=manualActive;workKick=Math.max(0,workKick-dt*.3);
+ manualBlend=THREE.MathUtils.lerp(manualBlend,manualActive?1:0,Math.min(1,dt*12));
+ const scoop=heldTool===3,stroke=Math.sin(time*(scoop?8:18));
+ held.position.set(.34+(scoop?Math.sin(time*8)*.025*manualBlend:0),-.34+(scoop?stroke*.055*manualBlend:0),-.63+workKick+manualBlend*.015);
+ held.rotation.set((scoop?-.12+stroke*.22:stroke*.035)*manualBlend,0,(scoop?Math.cos(time*8)*.07:Math.sin(time*6)*.012)*manualBlend);
+ toolEffects.position.copy(held.position);toolEffects.rotation.copy(held.rotation);lighterFlame.visible=manualActive&&heldTool<3;
  lighterFlame.position.set(0,heldTool===2?.3:.265,heldTool===2?-.49:0);
- lighterFlame.scale.set(1+Math.sin(time*31)*.1,.9+Math.sin(time*23)*.17+Math.sin(time*47)*.07,1+Math.cos(time*29)*.08);
+ const flamePower=heldTool===2?1.9:heldTool===1?1.45:1.15;
+ lighterFlame.scale.set((1+Math.sin(time*31)*.1)*flamePower,(.9+Math.sin(time*23)*.17+Math.sin(time*47)*.07)*flamePower,(1+Math.cos(time*29)*.08)*flamePower);
  lighterFlame.rotation.z=Math.sin(time*17)*.1;
+ manualImpact.visible=manualActive;
+ if(manualActive){const phase=time*(scoop?1.3:1.7)%1,radius=stage<2?(stage===0?.5:.8):Math.min(bounds.hx*.25,3),inward=heldTool===4||heldTool===5;manualImpact.position.y=surface.position.y+.035;manualImpact.scale.setScalar(.15+(inward?1-phase:phase)*radius*2);impactMaterial.opacity=(1-phase)*.7;impactMaterial.color.set(heldTool>=6?'#ffd26b':heldTool<3?'#fff2ae':'#c0fff3');}
  camera.position.set(player.position.x,player.position.y+2.95,player.position.z);camera.rotation.set(pitch,yaw,0,'YXZ');
  const pos=destPosition();if(pos){marker.position.copy(pos);marker.position.y=2.8+Math.sin(time*3)*.18;marker.rotation.y=time;}
  for(let i=0;i<rotors.length;i++){if(autoOn){rotors[i].rotation.z+=dt*(3+i);rotors[i].scale.setScalar(1+Math.sin(time*6+i)*.04);}}
  effectTime+=dt;
- if(effectTime>=1/30){const effectDt=effectTime;effectTime=0;const emitting=(working||autoOn)&&fraction>0;emission+=emitting?effectDt*(preferences.quality==='low'?8:22):0;
+ if(effectTime>=1/30){const effectDt=effectTime;effectTime=0;const emitting=(working||autoOn)&&fraction>0;emission+=emitting?effectDt*(preferences.quality==='low'?(manualActive?12:6):(manualActive?30:16)):0;
  while(emission>=1){emission--;liveParticles=true;const p=particles[particleCursor++%particleLimit];p.life=.7+rand()*.7;p.size=.6+rand();p.position.set((rand()-.5)*Math.min(bounds.hx,3),surface.position.y+.05,-4+(rand()-.5)*Math.min(bounds.hz,2));p.velocity.set((rand()-.5)*.3,.5+rand()*.6,(rand()-.5)*.3);}
  if(liveParticles){let alive=0;for(let i=0;i<particles.length;i++){const p=particles[i];p.life=Math.max(0,p.life-effectDt);if(p.life>0){alive++;p.position.addScaledVector(p.velocity,effectDt);}particleTransform.position.copy(p.position);particleTransform.scale.setScalar(p.life>0?p.size*Math.min(1,p.life*3):0);particleTransform.updateMatrix();steam.setMatrixAt(i,particleTransform.matrix);}steam.instanceMatrix.needsUpdate=true;liveParticles=alive>0;}steam.visible=liveParticles;
  }
- beam.visible=working&&heldTool>=4;if(beam.visible){const a=beamStart;held.getWorldPosition(a);const b=beamEnd.set(0,surface.position.y,-4);const v=beamDirection.subVectors(b,a);beam.position.copy(a).add(b).multiplyScalar(.5);beam.scale.set(heldTool>5?3:1,v.length(),heldTool>5?3:1);beam.quaternion.setFromUnitVectors(up,v.normalize());beam.material.color.set(heldTool>5?'#ffd77a':'#8ce4df');}
+ beam.visible=manualActive&&heldTool>=4;if(beam.visible){const a=beamStart;held.getWorldPosition(a);const b=beamEnd.set(0,surface.position.y,-4);const v=beamDirection.subVectors(b,a);beam.position.copy(a).add(b).multiplyScalar(.5);const width=(heldTool>5?4:heldTool===5?1.8:1.3)*(1+Math.sin(time*12)*.08);beam.scale.set(width,v.length(),width);beam.quaternion.setFromUnitVectors(up,v.normalize());beam.material.color.set(heldTool>5?'#ffd77a':'#8ce4df');}
  renderer.render(scene,camera);
  frameState.nearWater=nearWater();frameState.store=closestStore();frameState.destinationDistance=pos?Math.round(player.position.distanceTo(pos)):0;frameState.heat=heat;frameState.levelDrop=top-surface.position.y;frameState.exposedArea=view.exposedArea;frameState.machineCount=view.machineCount;frameState.commissioning=view.pulse;return frameState;
  }

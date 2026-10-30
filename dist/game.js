@@ -7,14 +7,14 @@ export const STAGES = [
   {name:'The actual ocean',short:'Ocean',capacity:1000000000,revenue:350000,bonus:100000,radius:25,tag:'A PERFECTLY REASONABLE PLAN',story:'A compact, billion-litre ocean. The physics department has left.',relic:'The keys to Atlantis'}
 ];
 export const TOOLS = [
- {name:'Pocket lighter',cost:0,rate:0.006,kind:'fire',desc:'A tiny flame. An unreasonable ambition.',icon:'01'},
- {name:'Storm lighter',cost:24,rate:0.014,kind:'fire',desc:'Windproof. Doubtproof. 2.3× the flame.',icon:'02'},
- {name:'Blowtorch',cost:90,rate:0.085,kind:'fire',desc:'Now we are actually cooking.',icon:'03'},
- {name:'Power scoop',cost:250,rate:1.8,kind:'scoop',desc:'A bucket with a deeply unnecessary motor.',icon:'04'},
- {name:'Suction cannon',cost:1400,rate:300,kind:'pump',desc:'The water is going to have to go somewhere.',icon:'05'},
- {name:'Industrial siphon',cost:7000,rate:20000,kind:'pump',desc:'Municipal infrastructure. Handheld edition.',icon:'06'},
- {name:'Solar evaporator',cost:30000,rate:500000,kind:'solar',desc:'Borrow a little of the sun.',icon:'07'},
- {name:'Horizon eraser',cost:75000,rate:4500000,kind:'solar',desc:'For when the horizon is mostly water.',icon:'08'}
+ {name:'Pocket lighter',cost:0,rate:0.009,kind:'fire',desc:'A tiny flame. An unreasonable ambition.',icon:'01'},
+ {name:'Storm lighter',cost:24,rate:0.021,kind:'fire',desc:'Windproof. Doubtproof. 2.3× the flame.',icon:'02'},
+ {name:'Blowtorch',cost:90,rate:0.1275,kind:'fire',desc:'Now we are actually cooking.',icon:'03'},
+ {name:'Power scoop',cost:250,rate:2.7,kind:'scoop',desc:'A bucket with a deeply unnecessary motor.',icon:'04'},
+ {name:'Suction cannon',cost:1400,rate:450,kind:'pump',desc:'The water is going to have to go somewhere.',icon:'05'},
+ {name:'Industrial siphon',cost:7000,rate:30000,kind:'pump',desc:'Municipal infrastructure. Handheld edition.',icon:'06'},
+ {name:'Solar evaporator',cost:30000,rate:750000,kind:'solar',desc:'Borrow a little of the sun.',icon:'07'},
+ {name:'Horizon eraser',cost:75000,rate:6750000,kind:'solar',desc:'For when the horizon is mostly water.',icon:'08'}
 ];
 export const MACHINES = [
  {name:'Gas stove',cost:55,rate:0.012,desc:'A faithful little flame. Works while you shop.'},

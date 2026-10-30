@@ -14,7 +14,7 @@ These takeaways are design interpretations, not claims that those games contain 
 
 Work near water → earn cash proportional to actual removed volume → walk to a shop → buy power or autonomous production → expose the bottom → recover a keepsake and claim a stage bonus → tackle a radically larger container.
 
-The opening lighter clears the cup in about 42 seconds of continuous work. The first upgrade is affordable after about 25 seconds. Stage income and bonuses finance the next power jump. Early rates are millilitres per second; later tools reach millions of litres per second. Good Business increases cash per unit of removed water, Steady Hands improves active power, and Machine Whisperer improves automation.
+The opening lighter clears the cup in about 28 seconds of continuous work. The first upgrade is affordable after about 17 seconds. Stage income and bonuses finance the next power jump. Early rates are millilitres per second; later tools reach millions of litres per second. Good Business increases cash per unit of removed water, Steady Hands improves active power, and Machine Whisperer improves automation.
 
 ## Graphics and feedback
 
@@ -70,3 +70,5 @@ Luna provided an independent small-task economy review. Its pacing suggestions i
 Raised-source revision: shared water elevations keep the bathtub, pool, lake and ocean above grade. Larger gauges map 0–100% to a fixed, readable instrument above the viewing deck; their floats no longer disappear underground. Rectangular sources have transparent front walls and descending side volumes. Shore contours match the water geometry; exterior stairs connect the shops to the deck, and interior steps or banks open as water falls. Machine pipes rise over the rim and ocean decks stand above the full waterline.
 
 CPU profiling revision: the earlier unrestricted refresh loop rendered at 144 FPS on the measured display. Default active pacing now targets 60 FPS, with 30 FPS idle, 10 FPS browsing, and 1 FPS paused/settings. A persistent deadline avoids the old threshold limiter's accumulated drift. Mouse movement/right-drag and walking restore active pacing; economy time uses elapsed seconds. Static scene branches cache transforms until a parent moves. Machine chassis share batches while rotors, fire and water remain dynamic. Frame-rate changes reset adaptive-resolution windows so intentional idle pacing is not mistaken for overload.
+
+Manual-impact revision: all manual tool base rates are 50% higher, preserving upgrade price and automation rates. Larger flames distinguish lighter tiers; the scoop has a pronounced stroke, suction/solar beams pulse more strongly, and a pooled surface ring and steam show active work without camera shake or extra particle allocation.
